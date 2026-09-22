@@ -1,0 +1,475 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  currency  String   @default("RWF")
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  members   Member[]
+  accounts  Account[]
+  plans     ContributionPlan[]
+  events    Event[]
+  sessions  AttendanceSession[]
+  expenses  Expense[]
+  auditLogs AuditLog[]
+  debts     Debt[]
+  debtRepayments DebtRepayment[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  role         Role     @default(MANAGER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  paymentsRecorded Payment[]
+  expensesRecorded Expense[]
+  sessionsRecorded AttendanceSession[]
+  auditLogs        AuditLog[]
+
+  @@index([tenantId])
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  PROBATION
+  ALUMNI
+}
+
+model Member {
+  id             String       @id @default(uuid())
+  tenantId       String
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membershipCode String?
+  fullName       String
+  phone          String?
+  email          String?
+  gender         Gender       @default(OTHER)
+  voicePart      String? // Soprano, Alto, Tenor, Bass
+  status         MemberStatus @default(ACTIVE)
+  joinedDate     DateTime?    @default(now())
+  notes          String?
+  creditBalance  Decimal      @default(0) @db.Decimal(12, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  assessments      ContributionAssessment[]
+  eventAssessments MemberEventAssessment[]
+  payments         Payment[]
+  attendance       AttendanceRecord[]
+
+  @@unique([tenantId, membershipCode])
+  @@index([tenantId, status])
+}
+
+enum AccountType {
+  GENERAL_DUES
+  EVENT_PROJECT
+  BANK_ACCOUNT
+  MOBILE_MONEY
+  PETTY_CASH
+}
+
+model Account {
+  id            String      @id @default(uuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String
+  type          AccountType @default(GENERAL_DUES)
+  accountNumber String?
+  balance       Decimal     @default(0) @db.Decimal(14, 2)
+  isDefault     Boolean     @default(false)
+  description   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  payments          Payment[]
+  expenseSplits     ExpenseAccountSplit[]
+  subEvents         SubEvent[]
+  contributionPlans ContributionPlan[]
+  depositedDebts    Debt[]                @relation("DebtDepositAccount")
+  debtRepayments    DebtRepayment[]       @relation("RepaymentSourceAccount")
+
+  @@index([tenantId])
+}
+
+enum PlanCycle {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model ContributionPlan {
+  id              String             @id @default(uuid())
+  tenantId        String
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title           String
+  cycle           PlanCycle          @default(MONTHLY)
+  defaultAmount   Decimal            @db.Decimal(12, 2)
+  startDate       DateTime
+  endDate         DateTime?
+  isActive        Boolean            @default(true)
+  targetAccountId String?
+  targetAccount   Account?           @relation(fields: [targetAccountId], references: [id], onDelete: SetNull)
+  periods         ContributionPeriod[]
+
+  @@index([tenantId])
+}
+
+model ContributionPeriod {
+  id         String           @id @default(uuid())
+  planId     String
+  plan       ContributionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  label      String
+  orderIndex Int
+  dueDate    DateTime
+  isClosed   Boolean          @default(false)
+
+  assessments ContributionAssessment[]
+
+  @@index([planId, orderIndex])
+}
+
+enum AssessmentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  SURPLUS
+}
+
+model ContributionAssessment {
+  id             String             @id @default(uuid())
+  periodId       String
+  period         ContributionPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member             @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  expectedAmount Decimal            @db.Decimal(12, 2)
+  paidAmount     Decimal            @default(0) @db.Decimal(12, 2)
+  status         AssessmentStatus   @default(UNPAID)
+  surplusAmount  Decimal            @default(0) @db.Decimal(12, 2)
+
+  allocations PaymentAllocation[]
+
+  @@unique([periodId, memberId])
+  @@index([memberId])
+}
+
+enum EventStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum TargetAudience {
+  ALL
+  MEN_ONLY
+  WOMEN_ONLY
+  CUSTOM_SELECTION
+}
+
+model Event {
+  id          String      @id @default(uuid())
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title       String
+  eventDate   DateTime
+  location    String?
+  status      EventStatus @default(ACTIVE)
+  description String?
+  createdAt   DateTime    @default(now())
+
+  subEvents SubEvent[]
+  expenses  Expense[]
+  debts     Debt[]
+
+  @@index([tenantId])
+}
+
+model SubEvent {
+  id              String         @id @default(uuid())
+  eventId         String
+  event           Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  title           String
+  targetAudience  TargetAudience @default(ALL)
+  defaultAmount   Decimal        @db.Decimal(12, 2)
+  targetAccountId String?
+  targetAccount   Account?       @relation(fields: [targetAccountId], references: [id], onDelete: SetNull)
+
+  assessments MemberEventAssessment[]
+
+  @@index([eventId])
+}
+
+model MemberEventAssessment {
+  id             String           @id @default(uuid())
+  subEventId     String
+  subEvent       SubEvent         @relation(fields: [subEventId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  assignedAmount Decimal          @db.Decimal(12, 2)
+  paidAmount     Decimal          @default(0) @db.Decimal(12, 2)
+  status         AssessmentStatus @default(UNPAID)
+  surplusAmount  Decimal          @default(0) @db.Decimal(12, 2)
+
+  allocations PaymentAllocation[]
+
+  @@unique([subEventId, memberId])
+  @@index([memberId])
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  BANK_TRANSFER
+  CREDIT_BALANCE
+  OTHER
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  tenantId         String
+  memberId         String
+  member           Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  accountId        String
+  account          Account       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  amount           Decimal       @db.Decimal(12, 2)
+  paymentDate      DateTime      @default(now())
+  method           PaymentMethod @default(MOBILE_MONEY)
+  referenceNumber  String?
+  notes            String?
+  recordedByUserId String
+  recordedByUser   User          @relation(fields: [recordedByUserId], references: [id])
+  createdAt        DateTime      @default(now())
+
+  allocations PaymentAllocation[]
+
+  @@index([tenantId, paymentDate])
+  @@index([memberId])
+}
+
+model PaymentAllocation {
+  id        String  @id @default(uuid())
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  contributionAssessmentId String?
+  contributionAssessment   ContributionAssessment? @relation(fields: [contributionAssessmentId], references: [id], onDelete: Cascade)
+
+  eventAssessmentId String?
+  eventAssessment   MemberEventAssessment? @relation(fields: [eventAssessmentId], references: [id], onDelete: Cascade)
+
+  allocatedAmount Decimal @db.Decimal(12, 2)
+  surplusAmount   Decimal @default(0) @db.Decimal(12, 2)
+
+  @@index([paymentId])
+}
+
+enum ExpenseCategory {
+  COACH_TRAINER
+  UNIFORM_FABRIC
+  SOUND_EQUIPMENT
+  VENUE_LOGISTICS
+  TRANSPORT
+  REFRESHMENTS
+  WELFARE_BENEVOLENCE
+  OTHER
+}
+
+model Expense {
+  id               String          @id @default(uuid())
+  tenantId         String
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId          String?
+  event            Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  title            String
+  description      String?
+  amount           Decimal         @db.Decimal(14, 2)
+  expenseDate      DateTime        @default(now())
+  category         ExpenseCategory @default(OTHER)
+  vendorName       String?
+  receiptUrl       String?
+  isPlanned        Boolean         @default(false)
+  recordedByUserId String
+  recordedByUser   User            @relation(fields: [recordedByUserId], references: [id])
+  createdAt        DateTime        @default(now())
+
+  splits ExpenseAccountSplit[]
+
+  @@index([tenantId, expenseDate])
+}
+
+model ExpenseAccountSplit {
+  id        String  @id @default(uuid())
+  expenseId String
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  amount    Decimal @db.Decimal(14, 2)
+
+  @@index([expenseId])
+}
+
+enum SessionType {
+  REGULAR_PRACTICE
+  INTERCESSION_PRAYER
+  SUNDAY_SERVICE
+  CONCERT_CALL
+  COMMITTEE_MEETING
+  SPECIAL_EVENT
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model AttendanceSession {
+  id                 String        @id @default(uuid())
+  tenantId           String
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title              String
+  sessionType        SessionType   @default(REGULAR_PRACTICE)
+  sessionDate        DateTime
+  startTime          String?
+  endTime            String?
+  isRecurring        Boolean       @default(false)
+  recurrenceRule     String?
+  status             SessionStatus @default(SCHEDULED)
+  cancellationReason String?
+  notes              String?
+  recordedByUserId   String
+  recordedByUser     User          @relation(fields: [recordedByUserId], references: [id])
+  createdAt          DateTime      @default(now())
+
+  records AttendanceRecord[]
+
+  @@index([tenantId, sessionDate])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT_EXCUSED
+  ABSENT_UNEXCUSED
+  LATE
+}
+
+model AttendanceRecord {
+  id          String            @id @default(uuid())
+  sessionId   String
+  session     AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  memberId    String
+  member      Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  status      AttendanceStatus  @default(PRESENT)
+  reasonNote  String?
+  checkInTime DateTime?
+
+  @@unique([sessionId, memberId])
+  @@index([memberId])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actorName   String?
+  action      String
+  entityType  String
+  entityId    String?
+  description String   // Well-readable human description
+  details     Json?
+  timestamp   DateTime @default(now())
+
+  @@index([tenantId, timestamp])
+  @@index([timestamp])
+}
+
+enum DebtStatus {
+  ACTIVE
+  PARTIALLY_PAID
+  FULLY_PAID
+}
+
+model Debt {
+  id               String       @id @default(uuid())
+  tenantId         String
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lenderName       String
+  lenderContact    String?
+  title            String
+  description      String?
+  principalAmount  Decimal      @db.Decimal(14, 2)
+  remainingAmount  Decimal      @db.Decimal(14, 2)
+  borrowDate       DateTime
+  dueDate          DateTime?
+  status           DebtStatus   @default(ACTIVE)
+  depositAccountId String?
+  depositAccount   Account?     @relation("DebtDepositAccount", fields: [depositAccountId], references: [id], onDelete: SetNull)
+  eventId          String?
+  event            Event?       @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  recordedByUserId String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  repayments       DebtRepayment[]
+
+  @@index([tenantId, status])
+}
+
+model DebtRepayment {
+  id               String        @id @default(uuid())
+  tenantId         String
+  tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  debtId           String
+  debt             Debt          @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  amount           Decimal       @db.Decimal(14, 2)
+  repaymentDate    DateTime
+  sourceAccountId  String
+  sourceAccount    Account       @relation("RepaymentSourceAccount", fields: [sourceAccountId], references: [id], onDelete: Restrict)
+  method           PaymentMethod @default(CASH)
+  referenceNumber  String?
+  notes            String?
+  recordedByUserId String?
+  createdAt        DateTime      @default(now())
+
+  @@index([tenantId])
+  @@index([debtId])
+}
+

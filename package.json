@@ -1,0 +1,22 @@
+{
+  "name": "keeper-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Keeper - Community & Choir Operations Platform",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @keeper/database db:generate",
+    "db:push": "pnpm --filter @keeper/database db:push",
+    "db:migrate": "pnpm --filter @keeper/database db:migrate",
+    "db:seed": "pnpm --filter @keeper/database db:seed",
+    "db:studio": "pnpm --filter @keeper/database db:studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.4",
+    "typescript": "^5.7.3"
+  },
+  "packageManager": "pnpm@10.30.3"
+}
