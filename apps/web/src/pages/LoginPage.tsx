@@ -74,13 +74,13 @@ export const LoginPage: React.FC = () => {
             {isRegistering && (
               <>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700">Community / Choir Name</label>
+                  <label className="block text-xs font-bold text-slate-700">Community / Organization Name</label>
                   <input
                     type="text"
                     required
                     value={communityName}
                     onChange={(e) => setCommunityName(e.target.value)}
-                    placeholder="e.g. Chorale de Kigali"
+                    placeholder="e.g. Kigali Youth Initiative"
                     className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-emerald-500 focus:outline-none"
                   />
                 </div>

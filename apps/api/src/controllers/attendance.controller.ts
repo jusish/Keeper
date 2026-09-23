@@ -74,7 +74,7 @@ export const getSessionById = async (
       include: {
         records: {
           include: { member: true },
-          orderBy: [{ member: { voicePart: 'asc' } }, { member: { fullName: 'asc' } }],
+          orderBy: [{ member: { fullName: 'asc' } }],
         },
       },
     });
@@ -115,7 +115,6 @@ export const getSessionById = async (
         sessionId: r.sessionId,
         memberId: r.memberId,
         memberFullName: r.member.fullName,
-        memberVoicePart: r.member.voicePart,
         status: r.status,
         reasonNote: r.reasonNote,
         checkInTime: r.checkInTime?.toISOString(),
@@ -273,7 +272,7 @@ export const cancelSession = async (
       action: 'SESSION_CANCELLED',
       entityType: 'AttendanceSession',
       entityId: id,
-      description: `${req.user!.fullName} cancelled session "${sess?.title || 'Rehearsal'}" for the whole choir. Reason: "${input.cancellationReason}".`,
+      description: `${req.user!.fullName} cancelled session "${sess?.title || 'Session'}" for the whole community. Reason: "${input.cancellationReason}".`,
     });
 
     res.json({ message: 'Session marked as cancelled with documented reason' });

@@ -3,12 +3,14 @@ import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../lib/utils';
 import { WhatsAppModal } from '../components/WhatsAppModal';
+import { StatCard } from '../components/common/StatCard';
 import {
   UserCheck,
   Plus,
   Calendar,
   Clock,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   AlertTriangle,
   RotateCw,
@@ -39,8 +41,8 @@ export const AttendancePage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // New Session form
-  const [newTitle, setNewTitle] = useState('Tuesday Vocal Rehearsal');
-  const [newType, setNewType] = useState<SessionType>(SessionType.REGULAR_PRACTICE);
+  const [newTitle, setNewTitle] = useState('Tuesday General Assembly');
+  const [newType, setNewType] = useState<SessionType>(SessionType.REGULAR_MEETING);
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [newStartTime, setNewStartTime] = useState('18:00');
   const [newEndTime, setNewEndTime] = useState('20:30');
@@ -196,10 +198,10 @@ export const AttendancePage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">
-            Attendance & Discipline Committee
+            Attendance & Discipline
           </h1>
           <p className="text-xs text-slate-500">
-            Track rehearsal attendance, excused absence reasons, and whole-choir session cancellations.
+            Track meeting and activity attendance, documented excuse notations, and session cancellations.
           </p>
         </div>
 
@@ -332,6 +334,45 @@ export const AttendancePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Session Attendance KPI Cards */}
+          {sessionDetail.recordCount && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                title="Present"
+                value={sessionDetail.recordCount.present}
+                subtitle={`${sessionDetail.recordCount.total > 0 ? Math.round((sessionDetail.recordCount.present / sessionDetail.recordCount.total) * 100) : 0}% attendance rate`}
+                icon={CheckCircle2}
+                color="emerald"
+                valueColor="text-emerald-700"
+                progress={sessionDetail.recordCount.total > 0 ? Math.round((sessionDetail.recordCount.present / sessionDetail.recordCount.total) * 100) : 0}
+              />
+              <StatCard
+                title="Excused"
+                value={sessionDetail.recordCount.excused}
+                subtitle="Approved excuse notes"
+                icon={Clock}
+                color="amber"
+                valueColor="text-amber-700"
+              />
+              <StatCard
+                title="Late"
+                value={sessionDetail.recordCount.late}
+                subtitle="Tardy arrivals"
+                icon={AlertTriangle}
+                color="purple"
+                valueColor="text-purple-700"
+              />
+              <StatCard
+                title="Unexcused"
+                value={sessionDetail.recordCount.unexcused}
+                subtitle="Absences without notice"
+                icon={Ban}
+                color="rose"
+                valueColor="text-rose-700"
+              />
+            </div>
+          )}
+
           {/* Cancellation Notice Banner (If cancelled) */}
           {sessionDetail.status === SessionStatus.CANCELLED && (
             <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-4">
@@ -339,7 +380,7 @@ export const AttendancePage: React.FC = () => {
                 <Ban className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-rose-900">
-                    Session Cancelled for the Whole Choir
+                    Session Cancelled for the Entire Community / Group
                   </h3>
                   <p className="mt-1 text-xs text-rose-800 leading-relaxed font-medium">
                     Reason: <em>"{sessionDetail.cancellationReason}"</em>
@@ -359,7 +400,7 @@ export const AttendancePage: React.FC = () => {
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600">
                     <th className="px-4 py-3">Member</th>
-                    <th className="px-3 py-3">Voice Section</th>
+                    <th className="px-3 py-3">Role / Tag</th>
                     <th className="px-3 py-3">Attendance Status</th>
                     <th className="px-4 py-3">Excuse Note / Reason</th>
                   </tr>
@@ -377,7 +418,7 @@ export const AttendancePage: React.FC = () => {
                           {r.memberFullName}
                         </td>
                         <td className="px-3 py-3 text-slate-500 font-medium">
-                          {r.memberVoicePart || 'Choir Member'}
+                          Member
                         </td>
                         <td className="px-3 py-3">
                           {/* 4 Status Toggle Buttons */}
@@ -459,9 +500,9 @@ export const AttendancePage: React.FC = () => {
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-900">Cancel Session for the Whole Choir</h3>
+            <h3 className="text-sm font-bold text-slate-900">Cancel Session for the Entire Community / Group</h3>
             <p className="mt-1 text-xs text-slate-500">
-              Provide a clear reason (e.g., severe storm, national holiday, mourning). The session will remain in the calendar marked as Cancelled.
+              Provide a clear reason (e.g., severe weather, holiday, emergency). The session will remain in the calendar marked as Cancelled.
             </p>
             <div className="mt-4">
               <label className="block text-xs font-bold text-slate-700">Cancellation Reason *</label>
@@ -470,7 +511,7 @@ export const AttendancePage: React.FC = () => {
                 rows={3}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="e.g. Flash torrential rain across Kigali making transport unsafe..."
+                placeholder="e.g. Inclement weather making travel unsafe..."
                 className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
               />
             </div>
@@ -498,7 +539,7 @@ export const AttendancePage: React.FC = () => {
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-900">Schedule Choir Activity / Session</h3>
+            <h3 className="text-sm font-bold text-slate-900">Schedule Community Activity / Session</h3>
             <form onSubmit={handleCreateSession} className="mt-4 space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700">Session Title *</label>
@@ -507,7 +548,7 @@ export const AttendancePage: React.FC = () => {
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. Tuesday Vocal Rehearsal"
+                  placeholder="e.g. Tuesday General Assembly"
                   className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
                 />
               </div>
@@ -519,11 +560,10 @@ export const AttendancePage: React.FC = () => {
                     onChange={(e) => setNewType(e.target.value as SessionType)}
                     className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
                   >
-                    <option value={SessionType.REGULAR_PRACTICE}>Regular Practice</option>
-                    <option value={SessionType.INTERCESSION_PRAYER}>Intercession Prayer</option>
-                    <option value={SessionType.SUNDAY_SERVICE}>Sunday Service Call</option>
-                    <option value={SessionType.CONCERT_CALL}>Concert Call Time</option>
+                    <option value={SessionType.REGULAR_MEETING}>General Assembly / Meeting</option>
                     <option value={SessionType.COMMITTEE_MEETING}>Committee Meeting</option>
+                    <option value={SessionType.WORKSHOP_TRAINING}>Workshop / Training</option>
+                    <option value={SessionType.COMMUNITY_WORK}>Community Work / Activity</option>
                     <option value={SessionType.SPECIAL_EVENT}>Special Event</option>
                   </select>
                 </div>

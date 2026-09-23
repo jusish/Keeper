@@ -57,11 +57,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   const quickNav = [
     { label: 'Umusanzu Matrix (Monthly Dues Grid)', path: '/contributions', icon: TableProperties },
-    { label: 'Events & Uniforms Dues', path: '/events', icon: CalendarCheck },
+    { label: 'Events & Projects', path: '/events', icon: CalendarCheck },
     { label: 'Treasury & Fund Accounts', path: '/accounts', icon: Wallet },
     { label: 'Expense Outflows Ledger', path: '/expenses', icon: Receipt },
     { label: 'Attendance & Disciplinary Sessions', path: '/attendance', icon: UserCheck },
-    { label: 'Choir Members Roster', path: '/members', icon: Users },
+    { label: 'Community Members Directory', path: '/members', icon: Users },
   ];
 
   return (
@@ -104,7 +104,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         {m.fullName.charAt(0)}
                       </div>
                       <span className="font-semibold text-slate-800">{m.fullName}</span>
-                      <span className="text-[10px] text-slate-500">({m.voicePart})</span>
+                      {m.membershipCode && (
+                        <span className="text-[10px] text-slate-500 font-mono">({m.membershipCode})</span>
+                      )}
                     </div>
                     <ArrowRight className="h-3 w-3 text-slate-400" />
                   </button>

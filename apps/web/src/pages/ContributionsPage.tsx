@@ -18,11 +18,13 @@ import {
   Sparkles,
   ChevronRight,
   TrendingUp,
+  Calendar,
 } from 'lucide-react';
 import {
   ContributionMatrixResponse,
   AssessmentStatus,
 } from '@keeper/shared';
+import { StatCard } from '../components/common/StatCard';
 
 interface ContributionsPageProps {
   onOpenQuickActions: (tab: string) => void;
@@ -35,8 +37,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
   const [data, setData] = useState<ContributionMatrixResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [voiceFilter, setVoiceFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SETTLED' | 'ARREARS' | 'SURPLUS'>('ALL');
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
@@ -63,7 +64,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
       const blob = await pdf(
         <UmusanzuMatrixPDF
           data={data}
-          tenantName={tenant?.name || 'Community Choir'}
+          tenantName={tenant?.name || 'Community Organization'}
           currency={tenant?.currency || 'RWF'}
         />
       ).toBlob();
@@ -88,13 +89,13 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
       (row.member.membershipCode &&
         row.member.membershipCode.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchVoice =
-      voiceFilter === 'ALL' || row.member.voicePart === voiceFilter;
-
     const matchStatus =
-      statusFilter === 'ALL' || row.overallStatus === statusFilter;
+      statusFilter === 'ALL' ||
+      (statusFilter === 'SETTLED' && row.totalRemaining === 0) ||
+      (statusFilter === 'ARREARS' && row.totalRemaining > 0) ||
+      (statusFilter === 'SURPLUS' && row.totalSurplus > 0);
 
-    return matchSearch && matchVoice && matchStatus;
+    return matchSearch && matchStatus;
   });
 
   if (isLoading) {
@@ -137,20 +138,8 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
           </p>
         </div>
 
-        {/* Global Stats & Export Buttons */}
+        {/* Export & Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="rounded-xl bg-slate-50 border border-slate-200/70 px-4 py-2 text-right">
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Annual Collected
-            </span>
-            <span className="text-base font-black text-emerald-700">
-              {formatCurrency(data.grandTotalCollected, tenant?.currency)}
-            </span>
-            <span className="text-[10px] text-slate-500 ml-1">
-              ({data.overallCollectionRate}%)
-            </span>
-          </div>
-
           <button
             onClick={() => setShowWhatsApp(true)}
             className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition shadow-2xs"
@@ -182,6 +171,43 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
         </div>
       </div>
 
+      {/* Unified KPI Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Projected Dues Target"
+          value={formatCurrency(data.grandTotalExpected, tenant?.currency)}
+          subtitle={`Annual dues assessment (${data.rows.length} members)`}
+          icon={Calendar}
+          color="slate"
+        />
+        <StatCard
+          title="Total Collected"
+          value={formatCurrency(data.grandTotalCollected, tenant?.currency)}
+          unit={`(${data.overallCollectionRate}%)`}
+          valueColor="text-emerald-700"
+          subtitle={`${data.overallCollectionRate}% collection progress`}
+          icon={TrendingUp}
+          color="emerald"
+          progress={data.overallCollectionRate}
+        />
+        <StatCard
+          title="Advance & Surplus Credit"
+          value={formatCurrency(data.grandTotalSurplus, tenant?.currency)}
+          valueColor="text-emerald-600"
+          subtitle="Pre-paid forward credit balances"
+          icon={Sparkles}
+          color="blue"
+        />
+        <StatCard
+          title="Unpaid Arrears"
+          value={formatCurrency(data.grandTotalRemaining, tenant?.currency)}
+          valueColor="text-rose-700"
+          subtitle="Outstanding member balances"
+          icon={AlertCircle}
+          color="rose"
+        />
+      </div>
+
       {/* Filter Toolbar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl bg-white border border-slate-200 p-3 shadow-2xs">
         {/* Search */}
@@ -196,19 +222,24 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
           />
         </div>
 
-        {/* Section / Voice Filter Tabs */}
+        {/* Member Status Filter Tabs */}
         <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto">
-          {['ALL', 'Soprano', 'Alto', 'Tenor', 'Bass'].map((v) => (
+          {[
+            { id: 'ALL', label: 'All Members' },
+            { id: 'SETTLED', label: 'Fully Settled' },
+            { id: 'ARREARS', label: 'In Arrears' },
+            { id: 'SURPLUS', label: 'Surplus Credit (+)' },
+          ].map((tab) => (
             <button
-              key={v}
-              onClick={() => setVoiceFilter(v)}
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id as any)}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition whitespace-nowrap ${
-                voiceFilter === v
+                statusFilter === tab.id
                   ? 'bg-slate-900 text-white shadow-2xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              {v}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -264,7 +295,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                           )}
                           <span>•</span>
                           <span className="font-medium text-slate-600">
-                            {row.member.voicePart || 'Member'}
+                            Member
                           </span>
                         </div>
                       </div>

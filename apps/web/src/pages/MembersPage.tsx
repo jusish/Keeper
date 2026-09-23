@@ -28,7 +28,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
   const [members, setMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [voiceFilter, setVoiceFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [memberDetail, setMemberDetail] = useState<any | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
@@ -68,9 +68,9 @@ export const MembersPage: React.FC<MembersPageProps> = ({
       (m.membershipCode && m.membershipCode.toLowerCase().includes(search.toLowerCase())) ||
       (m.phone && m.phone.includes(search));
 
-    const matchVoice = voiceFilter === 'ALL' || m.voicePart === voiceFilter;
+    const matchStatus = statusFilter === 'ALL' || m.status === statusFilter;
 
-    return matchSearch && matchVoice;
+    return matchSearch && matchStatus;
   });
 
   return (
@@ -79,10 +79,10 @@ export const MembersPage: React.FC<MembersPageProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">
-            Choir Members Roster
+            Community Members Directory
           </h1>
           <p className="text-xs text-slate-500">
-            {members.length} members enrolled across Soprano, Alto, Tenor, and Bass voice parts.
+            {members.length} registered members enrolled in {tenant?.name || 'the community'}.
           </p>
         </div>
 
@@ -111,17 +111,17 @@ export const MembersPage: React.FC<MembersPageProps> = ({
         </div>
 
         <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto">
-          {['ALL', 'Soprano', 'Alto', 'Tenor', 'Bass'].map((v) => (
+          {['ALL', 'ACTIVE', 'INACTIVE', 'PROBATION'].map((s) => (
             <button
-              key={v}
-              onClick={() => setVoiceFilter(v)}
+              key={s}
+              onClick={() => setStatusFilter(s)}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition whitespace-nowrap ${
-                voiceFilter === v
+                statusFilter === s
                   ? 'bg-slate-900 text-white shadow-2xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              {v}
+              {s}
             </button>
           ))}
         </div>
@@ -133,8 +133,8 @@ export const MembersPage: React.FC<MembersPageProps> = ({
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600">
               <th className="px-4 py-3">Member</th>
-              <th className="px-3 py-3">Voice Section</th>
               <th className="px-3 py-3">Phone</th>
+              <th className="px-3 py-3">Email</th>
               <th className="px-3 py-3">Gender</th>
               <th className="px-3 py-3 text-center">Status</th>
               <th className="px-4 py-3 text-right">Credit / Surplus</th>
@@ -162,11 +162,11 @@ export const MembersPage: React.FC<MembersPageProps> = ({
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-3 font-semibold text-slate-700">
-                  {m.voicePart || 'Member'}
-                </td>
                 <td className="px-3 py-3 text-slate-500 font-mono">
                   {m.phone || '-'}
+                </td>
+                <td className="px-3 py-3 text-slate-500">
+                  {m.email || '-'}
                 </td>
                 <td className="px-3 py-3 text-slate-500">{m.gender}</td>
                 <td className="px-3 py-3 text-center">
@@ -229,13 +229,13 @@ export const MembersPage: React.FC<MembersPageProps> = ({
                   </div>
                   <div className="rounded-xl bg-slate-50 p-3 border border-slate-200/70">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      Voice Section
+                      Membership Code
                     </span>
-                    <p className="mt-1 text-base font-bold text-slate-900">
-                      {memberDetail.member.voicePart || 'Member'}
+                    <p className="mt-1 text-base font-bold text-slate-900 font-mono">
+                      {memberDetail.member.membershipCode || 'N/A'}
                     </p>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {memberDetail.member.membershipCode || 'No code'}
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      Status: {memberDetail.member.status}
                     </span>
                   </div>
                 </div>

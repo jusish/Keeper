@@ -3,6 +3,7 @@ import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { WhatsAppModal } from '../components/WhatsAppModal';
+import { StatCard } from '../components/common/StatCard';
 import {
   CalendarCheck,
   Plus,
@@ -17,6 +18,7 @@ import {
   Shirt,
   MapPin,
   Calendar,
+  Wallet,
 } from 'lucide-react';
 import {
   TargetAudience,
@@ -139,9 +141,9 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       {/* Page Title & Event Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900">Events, Concerts & Uniforms</h1>
+          <h1 className="text-xl font-extrabold text-slate-900">Events & Projects</h1>
           <p className="text-xs text-slate-500">
-            Multi-tiered projects with gender-specific requirements, individual cuts, and no neutral exemptions.
+            Multi-tiered community project assessments, member contributions, and financial settlements.
           </p>
         </div>
 
@@ -240,39 +242,39 @@ export const EventsPage: React.FC<EventsPageProps> = ({
           </div>
 
           {/* Financial KPI Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200/70">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Total Budgeted
-              </span>
-              <p className="mt-1 text-base font-black text-slate-800 font-mono">
-                {formatCurrency(settlement.totalAssessed, tenant?.currency)}
-              </p>
-            </div>
-            <div className="rounded-xl bg-emerald-50/70 p-3.5 border border-emerald-200/70">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                Total Inflow Collected
-              </span>
-              <p className="mt-1 text-base font-black text-emerald-800 font-mono">
-                {formatCurrency(settlement.totalCollected, tenant?.currency)}
-              </p>
-            </div>
-            <div className="rounded-xl bg-rose-50/70 p-3.5 border border-rose-200/70">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">
-                Expenses Paid Out
-              </span>
-              <p className="mt-1 text-base font-black text-rose-800 font-mono">
-                {formatCurrency(settlement.expensesTotal, tenant?.currency)}
-              </p>
-            </div>
-            <div className="rounded-xl bg-blue-50/70 p-3.5 border border-blue-200/70">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
-                Net Project Balance
-              </span>
-              <p className="mt-1 text-base font-black text-blue-900 font-mono">
-                {formatCurrency(settlement.netMargin, tenant?.currency)}
-              </p>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              title="Total Budgeted"
+              value={formatCurrency(settlement.totalAssessed, tenant?.currency)}
+              subtitle="Target project assessment"
+              icon={CalendarCheck}
+              color="slate"
+            />
+            <StatCard
+              title="Total Inflow Collected"
+              value={formatCurrency(settlement.totalCollected, tenant?.currency)}
+              subtitle={`${settlement.totalAssessed > 0 ? Math.round((settlement.totalCollected / settlement.totalAssessed) * 100) : 0}% collected`}
+              icon={TrendingUp}
+              color="emerald"
+              valueColor="text-emerald-700"
+              progress={settlement.totalAssessed > 0 ? Math.round((settlement.totalCollected / settlement.totalAssessed) * 100) : 0}
+            />
+            <StatCard
+              title="Expenses Paid Out"
+              value={formatCurrency(settlement.expensesTotal, tenant?.currency)}
+              subtitle="Project operational costs"
+              icon={Receipt}
+              color="rose"
+              valueColor="text-rose-700"
+            />
+            <StatCard
+              title="Net Project Balance"
+              value={formatCurrency(settlement.netMargin, tenant?.currency)}
+              subtitle="Remaining project reserve"
+              icon={Wallet}
+              color="blue"
+              valueColor="text-blue-900"
+            />
           </div>
 
           {/* Sub-Events List (e.g. Uniform Men, Uniform Women, Hall) */}
@@ -336,7 +338,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600">
                     <th className="px-4 py-3">Member</th>
-                    <th className="px-3 py-3">Voice / Gender</th>
+                    <th className="px-3 py-3">Code / Gender</th>
                     <th className="px-3 py-3">Assigned Sub-Events</th>
                     <th className="px-3 py-3 text-right">Target Due</th>
                     <th className="px-3 py-3 text-right">Paid</th>
@@ -352,7 +354,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
                         {m.member.fullName}
                       </td>
                       <td className="px-3 py-3 text-slate-500">
-                        {m.member.voicePart} • {m.member.gender}
+                        {m.member.membershipCode || 'Member'} • {m.member.gender}
                       </td>
                       <td className="px-3 py-3">
                         <div className="space-y-1">

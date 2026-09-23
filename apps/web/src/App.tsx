@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import { Layout } from './components/layout/Layout';
+import { AdminLayout } from './components/layout/AdminLayout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ContributionsPage } from './pages/ContributionsPage';
@@ -50,9 +51,36 @@ export const App: React.FC = () => {
     return <LoginPage />;
   }
 
+  // Dedicated enterprise shell for Super Admin
+  if (user.role === 'SUPER_ADMIN') {
+    let initialTab: 'overview' | 'communities' | 'users' | 'audit' = 'overview';
+    if (currentPath === '/admin/communities') initialTab = 'communities';
+    else if (currentPath === '/admin/users') initialTab = 'users';
+    else if (currentPath === '/admin/audit' || currentPath === '/audit') initialTab = 'audit';
+
+    return (
+      <AdminLayout
+        currentPath={currentPath}
+        onNavigate={navigate}
+      >
+        <SuperAdminPortal
+          key={refreshKey}
+          initialTab={initialTab}
+          onNavigate={navigate}
+        />
+      </AdminLayout>
+    );
+  }
+
   const renderPage = () => {
-    if (currentPath === '/admin' || (user.role === 'SUPER_ADMIN' && currentPath === '/')) {
-      return <SuperAdminPortal key={refreshKey} />;
+    if (currentPath.startsWith('/admin')) {
+      return (
+        <DashboardPage
+          key={refreshKey}
+          onNavigate={navigate}
+          onOpenQuickActions={(tab) => {}}
+        />
+      );
     }
     if (currentPath === '/audit') {
       return <AuditLogsPage key={refreshKey} />;

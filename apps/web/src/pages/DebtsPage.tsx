@@ -8,6 +8,7 @@ import {
   AccountDTO,
   PaymentMethod,
 } from '@keeper/shared';
+import { StatCard } from '../components/common/StatCard';
 import {
   Landmark,
   Plus,
@@ -196,7 +197,7 @@ export const DebtsPage: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Track borrowed funds for choir activities, manage installment repayments, and maintain real-time treasury ledger integrity
+            Track borrowed funds for community initiatives, manage installment repayments, and maintain real-time treasury ledger integrity
           </p>
         </div>
 
@@ -224,59 +225,44 @@ export const DebtsPage: React.FC = () => {
       {/* KPI Cards */}
       {data && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Total Borrowed</span>
-              <div className="rounded-lg bg-slate-100 p-2 text-slate-700">
-                <Landmark className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-3 text-2xl font-black text-slate-900">
-              {data.totalBorrowed.toLocaleString()} <span className="text-xs font-normal text-slate-500">{tenant?.currency}</span>
-            </p>
-            <span className="mt-1 text-[11px] text-slate-500 font-medium">Cumulative liabilities incurred</span>
-          </div>
+          <StatCard
+            title="Total Borrowed"
+            value={data.totalBorrowed.toLocaleString()}
+            unit={tenant?.currency}
+            subtitle="Cumulative liabilities incurred"
+            icon={Landmark}
+            color="slate"
+          />
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Total Repaid</span>
-              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
-                <ArrowDownRight className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-3 text-2xl font-black text-emerald-700">
-              {data.totalRepaid.toLocaleString()} <span className="text-xs font-normal text-slate-500">{tenant?.currency}</span>
-            </p>
-            <span className="mt-1 text-[11px] text-emerald-600 font-medium">
-              {data.totalBorrowed > 0 ? Math.round((data.totalRepaid / data.totalBorrowed) * 100) : 100}% of principal settled
-            </span>
-          </div>
+          <StatCard
+            title="Total Repaid"
+            value={data.totalRepaid.toLocaleString()}
+            unit={tenant?.currency}
+            valueColor="text-emerald-700"
+            subtitle={`${data.totalBorrowed > 0 ? Math.round((data.totalRepaid / data.totalBorrowed) * 100) : 100}% of principal settled`}
+            icon={ArrowDownRight}
+            color="emerald"
+            progress={data.totalBorrowed > 0 ? Math.round((data.totalRepaid / data.totalBorrowed) * 100) : 100}
+          />
 
-          <div className="rounded-xl border border-rose-200 bg-rose-50/40 p-5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-rose-800">Outstanding Debt</span>
-              <div className="rounded-lg bg-rose-100 p-2 text-rose-700">
-                <AlertCircle className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-3 text-2xl font-black text-rose-900">
-              {data.totalOutstanding.toLocaleString()} <span className="text-xs font-normal text-rose-700">{tenant?.currency}</span>
-            </p>
-            <span className="mt-1 text-[11px] text-rose-700 font-medium">Active balance owed to lenders</span>
-          </div>
+          <StatCard
+            title="Outstanding Debt"
+            value={data.totalOutstanding.toLocaleString()}
+            unit={tenant?.currency}
+            valueColor="text-rose-700"
+            subtitle="Active balance owed to lenders"
+            icon={AlertCircle}
+            color="rose"
+          />
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Active Borrowings</span>
-              <div className="rounded-lg bg-amber-50 p-2 text-amber-700">
-                <Clock className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-3 text-2xl font-black text-slate-900">
-              {data.activeCount} <span className="text-xs font-normal text-slate-500">unsettled ({data.settledCount} cleared)</span>
-            </p>
-            <span className="mt-1 text-[11px] text-slate-500 font-medium">Lenders awaiting completion</span>
-          </div>
+          <StatCard
+            title="Active Borrowings"
+            value={data.activeCount}
+            unit={`(${data.settledCount} cleared)`}
+            subtitle="Lenders awaiting completion"
+            icon={Clock}
+            color="amber"
+          />
         </div>
       )}
 

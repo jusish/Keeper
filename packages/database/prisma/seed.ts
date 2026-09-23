@@ -28,16 +28,16 @@ async function main() {
   // 1. Create Communities (Tenants)
   const tenant1 = await prisma.tenant.create({
     data: {
-      name: 'Chorale de Kigali',
-      slug: 'chorale-de-kigali',
+      name: 'Kigali Community Association',
+      slug: 'kigali-community',
       currency: 'RWF',
     },
   });
 
   const tenant2 = await prisma.tenant.create({
     data: {
-      name: 'Saint Luc Cultural Ensemble',
-      slug: 'saint-luc-ensemble',
+      name: 'Saint Luc Cultural Cooperative',
+      slug: 'saint-luc-coop',
       currency: 'RWF',
     },
   });
@@ -101,7 +101,7 @@ async function main() {
       tenantId: tenant1.id,
       email: 'member@keeper.rw',
       passwordHash: commonHashed,
-      fullName: 'Marie Uwase (Choir Member)',
+      fullName: 'Marie Uwase (Community Member)',
       phone: '+250788445566',
       role: Role.VIEWER,
     },
@@ -176,28 +176,28 @@ async function main() {
     },
   });
 
-  // 4. Members for Chorale de Kigali
+  // 4. Members for Kigali Community Association
   const memberData = [
-    { fullName: 'Eric Manzi', gender: Gender.MALE, voicePart: 'Bass', code: 'KOR-001', phone: '+250788100001' },
-    { fullName: 'Alice Mutoni', gender: Gender.FEMALE, voicePart: 'Soprano', code: 'KOR-002', phone: '+250788100002' },
-    { fullName: 'Gaston Habimana', gender: Gender.MALE, voicePart: 'Tenor', code: 'KOR-003', phone: '+250788100003' },
-    { fullName: 'Clarisse Keza', gender: Gender.FEMALE, voicePart: 'Alto', code: 'KOR-004', phone: '+250788100004' },
-    { fullName: 'Patrick Bizimana', gender: Gender.MALE, voicePart: 'Bass', code: 'KOR-005', phone: '+250788100005' },
-    { fullName: 'Solange Uwera', gender: Gender.FEMALE, voicePart: 'Soprano', code: 'KOR-006', phone: '+250788100006' },
-    { fullName: 'Innocent Niyitegeka', gender: Gender.MALE, voicePart: 'Tenor', code: 'KOR-007', phone: '+250788100007' },
-    { fullName: 'Diane Mukamana', gender: Gender.FEMALE, voicePart: 'Alto', code: 'KOR-008', phone: '+250788100008' },
-    { fullName: 'Emmanuel Nshimiyimana', gender: Gender.MALE, voicePart: 'Bass', code: 'KOR-009', phone: '+250788100009' },
-    { fullName: 'Grace Uwimana', gender: Gender.FEMALE, voicePart: 'Soprano', code: 'KOR-010', phone: '+250788100010' },
-    { fullName: 'Claude Twahirwa', gender: Gender.MALE, voicePart: 'Tenor', code: 'KOR-011', phone: '+250788100011' },
-    { fullName: 'Honorine Ingabire', gender: Gender.FEMALE, voicePart: 'Alto', code: 'KOR-012', phone: '+250788100012' },
-    { fullName: 'Jean-Damascene Rukundo', gender: Gender.MALE, voicePart: 'Bass', code: 'KOR-013', phone: '+250788100013' },
-    { fullName: 'Fiona Ishimwe', gender: Gender.FEMALE, voicePart: 'Soprano', code: 'KOR-014', phone: '+250788100014' },
-    { fullName: 'Aimable Kwizera', gender: Gender.MALE, voicePart: 'Tenor', code: 'KOR-015', phone: '+250788100015' },
-    { fullName: 'Nathalie Mukeshimana', gender: Gender.FEMALE, voicePart: 'Alto', code: 'KOR-016', phone: '+250788100016' },
-    { fullName: 'Pacifique Tuyishime', gender: Gender.MALE, voicePart: 'Bass', code: 'KOR-017', phone: '+250788100017' },
-    { fullName: 'Yvette Uwase', gender: Gender.FEMALE, voicePart: 'Soprano', code: 'KOR-018', phone: '+250788100018' },
-    { fullName: 'Fabrice Mugisha', gender: Gender.MALE, voicePart: 'Tenor', code: 'KOR-019', phone: '+250788100019' },
-    { fullName: 'Sandrine Gasana', gender: Gender.FEMALE, voicePart: 'Alto', code: 'KOR-020', phone: '+250788100020' },
+    { fullName: 'Eric Manzi', gender: Gender.MALE, code: 'MEM-001', phone: '+250788100001' },
+    { fullName: 'Alice Mutoni', gender: Gender.FEMALE, code: 'MEM-002', phone: '+250788100002' },
+    { fullName: 'Gaston Habimana', gender: Gender.MALE, code: 'MEM-003', phone: '+250788100003' },
+    { fullName: 'Clarisse Keza', gender: Gender.FEMALE, code: 'MEM-004', phone: '+250788100004' },
+    { fullName: 'Patrick Bizimana', gender: Gender.MALE, code: 'MEM-005', phone: '+250788100005' },
+    { fullName: 'Solange Uwera', gender: Gender.FEMALE, code: 'MEM-006', phone: '+250788100006' },
+    { fullName: 'Innocent Niyitegeka', gender: Gender.MALE, code: 'MEM-007', phone: '+250788100007' },
+    { fullName: 'Diane Mukamana', gender: Gender.FEMALE, code: 'MEM-008', phone: '+250788100008' },
+    { fullName: 'Emmanuel Nshimiyimana', gender: Gender.MALE, code: 'MEM-009', phone: '+250788100009' },
+    { fullName: 'Grace Uwimana', gender: Gender.FEMALE, code: 'MEM-010', phone: '+250788100010' },
+    { fullName: 'Claude Twahirwa', gender: Gender.MALE, code: 'MEM-011', phone: '+250788100011' },
+    { fullName: 'Honorine Ingabire', gender: Gender.FEMALE, code: 'MEM-012', phone: '+250788100012' },
+    { fullName: 'Jean-Damascene Rukundo', gender: Gender.MALE, code: 'MEM-013', phone: '+250788100013' },
+    { fullName: 'Fiona Ishimwe', gender: Gender.FEMALE, code: 'MEM-014', phone: '+250788100014' },
+    { fullName: 'Aimable Kwizera', gender: Gender.MALE, code: 'MEM-015', phone: '+250788100015' },
+    { fullName: 'Nathalie Mukeshimana', gender: Gender.FEMALE, code: 'MEM-016', phone: '+250788100016' },
+    { fullName: 'Pacifique Tuyishime', gender: Gender.MALE, code: 'MEM-017', phone: '+250788100017' },
+    { fullName: 'Yvette Uwase', gender: Gender.FEMALE, code: 'MEM-018', phone: '+250788100018' },
+    { fullName: 'Fabrice Mugisha', gender: Gender.MALE, code: 'MEM-019', phone: '+250788100019' },
+    { fullName: 'Sandrine Gasana', gender: Gender.FEMALE, code: 'MEM-020', phone: '+250788100020' },
   ];
 
   const members = [];
@@ -207,7 +207,6 @@ async function main() {
         tenantId: tenant1.id,
         fullName: m.fullName,
         gender: m.gender,
-        voicePart: m.voicePart,
         membershipCode: m.code,
         phone: m.phone,
         status: MemberStatus.ACTIVE,
@@ -396,18 +395,18 @@ async function main() {
   const concert = await prisma.event.create({
     data: {
       tenantId: tenant1.id,
-      title: 'Easter Thanksgiving Concert 2026',
+      title: 'Annual Community Assembly & Cultural Gala 2026',
       eventDate: new Date('2026-04-12T15:00:00Z'),
       location: 'Kigali Cultural Village Conference Hall',
       status: EventStatus.ACTIVE,
-      description: 'Annual choir gala featuring custom tailored uniforms and invited vocalists',
+      description: 'Annual community general assembly featuring project reports, exhibitions, and member recognitions',
     },
   });
 
   const uniformMen = await prisma.subEvent.create({
     data: {
       eventId: concert.id,
-      title: 'Concert Uniform (Men - Blazers & Trousers)',
+      title: 'Gala Formal Attire (Men - Blazers & Trousers)',
       targetAudience: TargetAudience.MEN_ONLY,
       defaultAmount: 25000,
       targetAccountId: concertAccount.id,
@@ -417,7 +416,7 @@ async function main() {
   const uniformWomen = await prisma.subEvent.create({
     data: {
       eventId: concert.id,
-      title: 'Concert Uniform (Women - Traditional Imishanana)',
+      title: 'Gala Formal Attire (Women - Traditional Imishanana)',
       targetAudience: TargetAudience.WOMEN_ONLY,
       defaultAmount: 30000,
       targetAccountId: concertAccount.id,
@@ -427,7 +426,7 @@ async function main() {
   const venueContrib = await prisma.subEvent.create({
     data: {
       eventId: concert.id,
-      title: 'Venue & Production Contribution',
+      title: 'Venue & Technical Sound Contribution',
       targetAudience: TargetAudience.ALL,
       defaultAmount: 10000,
       targetAccountId: concertAccount.id,
@@ -472,12 +471,12 @@ async function main() {
   await prisma.expense.create({
     data: {
       tenantId: tenant1.id,
-      title: 'Vocal Coach Monthly Coaching Retainer (Jan 2026)',
-      category: ExpenseCategory.COACH_TRAINER,
+      title: 'Professional Facilitator Retainer (Jan 2026)',
+      category: ExpenseCategory.FACILITATOR_TRAINER,
       amount: 150000,
       expenseDate: new Date('2026-01-31'),
       isPlanned: true,
-      vendorName: 'Maestro Jean-Claude (Vocal Trainer)',
+      vendorName: 'Jean-Claude Ndayisaba (Consultant & Trainer)',
       recordedByUserId: accountantUser.id,
       splits: {
         create: [{ accountId: umusanzuAccount.id, amount: 150000 }],
@@ -489,8 +488,8 @@ async function main() {
     data: {
       tenantId: tenant1.id,
       eventId: concert.id,
-      title: 'Bulk Fabric Material for Choir Uniforms',
-      category: ExpenseCategory.UNIFORM_FABRIC,
+      title: 'Bulk Materials & Textiles for Community Gala',
+      category: ExpenseCategory.MATERIALS_SUPPLIES,
       amount: 400000,
       expenseDate: new Date('2026-02-10'),
       isPlanned: true,
@@ -509,16 +508,16 @@ async function main() {
   const session1 = await prisma.attendanceSession.create({
     data: {
       tenantId: tenant1.id,
-      title: 'Tuesday Vocal Sectional Rehearsal',
-      sessionType: SessionType.REGULAR_PRACTICE,
+      title: 'Tuesday General Coordination & Planning Assembly',
+      sessionType: SessionType.REGULAR_MEETING,
       sessionDate: new Date('2026-02-17T18:00:00Z'),
       startTime: '18:00',
-      endTime: '20:30',
+      endTime: '20:00',
       isRecurring: true,
       recurrenceRule: 'WEEKLY_TUESDAY',
       status: SessionStatus.COMPLETED,
       recordedByUserId: disciplinaryUser.id,
-      notes: 'Worked on Easter Gloria and Kyrie part 2',
+      notes: 'Reviewed community agenda and project milestones',
     },
   });
 
@@ -552,8 +551,8 @@ async function main() {
   await prisma.attendanceSession.create({
     data: {
       tenantId: tenant1.id,
-      title: 'Thursday Pre-Concert Intercession Session',
-      sessionType: SessionType.INTERCESSION_PRAYER,
+      title: 'Thursday Community Project Workshop',
+      sessionType: SessionType.WORKSHOP_TRAINING,
       sessionDate: new Date('2026-02-19T17:30:00Z'),
       startTime: '17:30',
       endTime: '19:30',
@@ -584,7 +583,7 @@ async function main() {
       actorName: adminUser.fullName,
       action: 'COMMUNITY_CREATED',
       entityType: 'Tenant',
-      description: 'Jean-Paul Mugisha established the workspace for "Chorale de Kigali".',
+      description: 'Jean-Paul Mugisha established the workspace for "Kigali Community Association".',
       timestamp: new Date('2026-01-01T09:00:00Z'),
     },
     {
@@ -611,7 +610,7 @@ async function main() {
       actorName: accountantUser.fullName,
       action: 'EXPENSE_RECORDED',
       entityType: 'Expense',
-      description: 'Aline Umutoni (Treasurer) recorded planned expense "Vocal Coach Monthly Coaching Retainer" of 150,000 RWF debited from "Main Umusanzu Fund".',
+      description: 'Aline Umutoni (Treasurer) recorded planned expense "Professional Facilitator Retainer" of 150,000 RWF debited from "Main Umusanzu Fund".',
       timestamp: new Date('2026-01-31T16:00:00Z'),
     },
     {
@@ -620,7 +619,7 @@ async function main() {
       actorName: accountantUser.fullName,
       action: 'SPLIT_EXPENSE_RECORDED',
       entityType: 'Expense',
-      description: 'Aline Umutoni (Treasurer) executed multi-account expense "Bulk Fabric Material for Choir Uniforms" of 400,000 RWF (split: 250,000 RWF from "Easter Concert Fund" + 150,000 RWF from "Treasurer MoMo Cashbox").',
+      description: 'Aline Umutoni (Treasurer) executed multi-account expense "Bulk Materials & Textiles for Community Gala" of 400,000 RWF (split: 250,000 RWF from "Gala Project Fund" + 150,000 RWF from "Treasurer MoMo Cashbox").',
       timestamp: new Date('2026-02-10T11:20:00Z'),
     },
     {
@@ -629,7 +628,7 @@ async function main() {
       actorName: disciplinaryUser.fullName,
       action: 'SESSION_CANCELLED',
       entityType: 'AttendanceSession',
-      description: 'David Nkurunziza (Discipline) cancelled Thursday Intercession session due to "Flash torrential rainstorm causing road flooding across Kigali".',
+      description: 'David Nkurunziza (Discipline) cancelled Thursday workshop due to "Flash torrential rainstorm causing road flooding across Kigali".',
       timestamp: new Date('2026-02-19T16:45:00Z'),
     },
     {
@@ -638,7 +637,7 @@ async function main() {
       actorName: disciplinaryUser.fullName,
       action: 'ATTENDANCE_FINALIZED',
       entityType: 'AttendanceSession',
-      description: 'David Nkurunziza (Discipline) finalized attendance roster for "Tuesday Vocal Sectional Rehearsal" (17 present, 1 late, 1 excused with reason, 1 unexcused).',
+      description: 'David Nkurunziza (Discipline) finalized attendance roster for "Tuesday General Coordination & Planning Assembly" (17 present, 1 late, 1 excused with reason, 1 unexcused).',
       timestamp: new Date('2026-02-17T20:35:00Z'),
     },
     {
@@ -647,7 +646,7 @@ async function main() {
       actorName: saintLucAdmin.fullName,
       action: 'COMMUNITY_CREATED',
       entityType: 'Tenant',
-      description: 'Gisele Uwimbabazi registered "Saint Luc Cultural Ensemble" community on the Keeper platform.',
+      description: 'Gisele Uwimbabazi registered "Saint Luc Cultural Cooperative" community on the Keeper platform.',
       timestamp: new Date('2026-02-01T10:00:00Z'),
     },
   ];

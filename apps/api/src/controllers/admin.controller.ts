@@ -169,3 +169,121 @@ export const getGlobalAuditLogs = async (
     next(error);
   }
 };
+
+export const createCommunity = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { name, slug, currency = 'RWF', adminName, adminEmail, adminPassword } = req.body;
+
+    if (!name || typeof name !== 'string') {
+      res.status(400).json({ message: 'Community name is required' });
+      return;
+    }
+
+    const cleanSlug = (slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+
+    const existing = await prisma.tenant.findUnique({ where: { slug: cleanSlug } });
+    if (existing) {
+      res.status(400).json({ message: `Community slug "${cleanSlug}" is already taken` });
+      return;
+    }
+
+    const tenant = await prisma.$transaction(async (tx) => {
+      const created = await tx.tenant.create({
+        data: {
+          name,
+          slug: cleanSlug,
+          currency: currency.toUpperCase(),
+        },
+      });
+
+      // Default treasury fund
+      await tx.account.create({
+        data: {
+          tenantId: created.id,
+          name: 'General Fund',
+          type: 'GENERAL_DUES' as any,
+          balance: 0,
+          isDefault: true,
+          description: 'Primary operating account for general contributions and dues',
+        },
+      });
+
+      // Optional initial community admin
+      if (adminEmail && adminPassword && adminName) {
+        const hashedPassword = await (await import('bcryptjs')).default.hash(adminPassword, 10);
+        await tx.user.create({
+          data: {
+            tenantId: created.id,
+            email: adminEmail.toLowerCase(),
+            passwordHash: hashedPassword,
+            fullName: adminName,
+            role: Role.ADMIN,
+          },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          tenantId: created.id,
+          userId: req.user!.id,
+          actorName: req.user!.fullName,
+          action: 'COMMUNITY_CREATED',
+          entityType: 'Tenant',
+          entityId: created.id,
+          description: `${req.user!.fullName} (Super Admin) registered new community organization "${name}" on Keeper platform.`,
+        },
+      });
+
+      return created;
+    });
+
+    res.status(201).json(tenant);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const toggleUserStatus = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    if (user.role === Role.SUPER_ADMIN) {
+      res.status(400).json({ message: 'Cannot deactivate Super Admin' });
+      return;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { isActive: !user.isActive },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        tenantId: user.tenantId,
+        userId: req.user!.id,
+        actorName: req.user!.fullName,
+        action: 'USER_UPDATED',
+        entityType: 'User',
+        entityId: user.id,
+        description: `${req.user!.fullName} (Super Admin) ${updated.isActive ? 'activated' : 'deactivated'} user "${user.fullName}" (${user.email}).`,
+      },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    next(error);
+  }
+};

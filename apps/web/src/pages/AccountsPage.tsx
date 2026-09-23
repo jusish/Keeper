@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils';
+import { StatCard } from '../components/common/StatCard';
 import {
   Wallet,
   Plus,
@@ -13,6 +14,7 @@ import {
   FolderLock,
   Calendar,
   Search,
+  Layers,
 } from 'lucide-react';
 import { AccountType } from '@keeper/shared';
 
@@ -108,6 +110,13 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
   };
 
   const totalFunds = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
+  const defaultAccount = accounts.find((a) => a.isDefault);
+  const liquidCash = accounts
+    .filter((a) => a.type === AccountType.MOBILE_MONEY || a.type === AccountType.PETTY_CASH)
+    .reduce((sum, a) => sum + Number(a.balance), 0);
+  const projectFunds = accounts
+    .filter((a) => a.type === AccountType.EVENT_PROJECT)
+    .reduce((sum, a) => sum + Number(a.balance), 0);
 
   return (
     <div className="space-y-6">
@@ -126,7 +135,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
             Treasury & Fund Accounts
           </h1>
           <p className="text-xs text-slate-500">
-            Segregated accounts for Umusanzu, Concert projects, Uniform funds, and Mobile Money cashboxes.
+            Segregated treasury funds for general contributions, community projects, operating reserves, and cashboxes.
           </p>
         </div>
 
@@ -143,7 +152,44 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
         </div>
       </div>
 
-      {/* Account Cards Grid */}
+      {/* Standard KPI Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Pooled Treasury"
+          value={formatCurrency(totalFunds, tenant?.currency)}
+          subtitle={`Aggregated across ${accounts.length} funds`}
+          icon={Wallet}
+          color="emerald"
+          valueColor="text-emerald-700"
+        />
+        <StatCard
+          title="Primary Operating Fund"
+          value={formatCurrency(defaultAccount ? Number(defaultAccount.balance) : 0, tenant?.currency)}
+          subtitle={defaultAccount ? defaultAccount.name : 'Default General Fund'}
+          icon={Landmark}
+          color="blue"
+        />
+        <StatCard
+          title="Mobile Money & Cash"
+          value={formatCurrency(liquidCash, tenant?.currency)}
+          subtitle="Instant liquid funds"
+          icon={Smartphone}
+          color="amber"
+        />
+        <StatCard
+          title="Dedicated Project Funds"
+          value={formatCurrency(projectFunds, tenant?.currency)}
+          subtitle="Allocated for community initiatives"
+          icon={Layers}
+          color="purple"
+        />
+      </div>
+
+      <div>
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+          Individual Accounts Roster
+        </h2>
+        {/* Account Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {accounts.map((acc) => {
           const isSelected = acc.id === selectedAccountId;
@@ -180,6 +226,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
             </div>
           );
         })}
+      </div>
       </div>
 
       {/* DETAILED ACCOUNT LEDGER */}

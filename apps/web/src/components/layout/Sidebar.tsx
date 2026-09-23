@@ -30,21 +30,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user } = useAuth();
 
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-
   const navItems = [
-    ...(isSuperAdmin
-      ? [{ label: 'Super Admin Portal', path: '/admin', icon: Shield, superAdmin: true }]
-      : []),
     { label: 'Dashboard', path: '/', icon: LayoutDashboard },
     { label: 'Umusanzu Matrix', path: '/contributions', icon: TableProperties, highlight: true },
-    { label: 'Events & Dues', path: '/events', icon: CalendarCheck },
+    { label: 'Events & Projects', path: '/events', icon: CalendarCheck },
     { label: 'Treasury & Accounts', path: '/accounts', icon: Wallet },
     { label: 'Expenses', path: '/expenses', icon: Receipt },
     { label: 'Debts & Borrowings', path: '/debts', icon: Landmark },
     { label: 'Attendance & Discipline', path: '/attendance', icon: UserCheck },
-    { label: 'Members Roster', path: '/members', icon: Users },
-    { label: 'Audit Logs', path: '/audit', icon: ScrollText },
+    { label: 'Community Members', path: '/members', icon: Users },
+    { label: 'Audit Trail', path: '/audit', icon: ScrollText },
   ];
 
   return (
@@ -69,30 +64,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => onNavigate(item.path)}
                   className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition ${
                     isActive
-                      ? item.superAdmin
-                        ? 'bg-amber-100 text-amber-950 font-black border border-amber-300 shadow-xs'
-                        : 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200/70 shadow-xs'
-                      : item.superAdmin
-                      ? 'bg-amber-50/70 text-amber-900 hover:bg-amber-100 font-bold border border-amber-200/60'
+                      ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200/70 shadow-xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <Icon
                       className={`h-4 w-4 ${
-                        isActive
-                          ? item.superAdmin ? 'text-amber-700' : 'text-emerald-700'
-                          : item.superAdmin ? 'text-amber-600' : 'text-slate-500'
+                        isActive ? 'text-emerald-700' : 'text-slate-500'
                       }`}
                     />
                     <span>{item.label}</span>
                   </div>
-                  {item.superAdmin && (
-                    <span className="rounded bg-amber-200 text-amber-900 px-1.5 py-0.2 text-[9px] font-mono font-bold">
-                      ROOT
-                    </span>
-                  )}
-                  {item.highlight && !item.superAdmin && (
+                  {item.highlight && (
                     <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
                   )}
                 </button>

@@ -138,7 +138,6 @@ export const getEventSettlement = async (
               membershipCode: ass.member.membershipCode,
               fullName: ass.member.fullName,
               gender: ass.member.gender,
-              voicePart: ass.member.voicePart,
               phone: ass.member.phone,
               creditBalance: Number(ass.member.creditBalance),
               status: ass.member.status,

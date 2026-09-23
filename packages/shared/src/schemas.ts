@@ -34,7 +34,6 @@ export const memberSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal('')),
   gender: z.nativeEnum(Gender).default(Gender.OTHER),
-  voicePart: z.string().optional(),
   status: z.nativeEnum(MemberStatus).default(MemberStatus.ACTIVE),
   joinedDate: z.string().optional(),
   notes: z.string().optional(),
@@ -113,7 +112,7 @@ export const updateAssessmentSchema = z.object({
 
 export const createSessionSchema = z.object({
   title: z.string().min(2, 'Session title is required'),
-  sessionType: z.nativeEnum(SessionType).default(SessionType.REGULAR_PRACTICE),
+  sessionType: z.nativeEnum(SessionType).default(SessionType.REGULAR_MEETING),
   sessionDate: z.string().min(1, 'Date is required'),
   startTime: z.string().optional(),
   endTime: z.string().optional(),

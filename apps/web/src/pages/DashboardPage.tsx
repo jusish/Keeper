@@ -15,6 +15,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { DashboardMetricsDTO } from '@keeper/shared';
+import { StatCard } from '../components/common/StatCard';
 
 interface DashboardPageProps {
   onNavigate: (path: string) => void;
@@ -91,106 +92,45 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Cash on Hand */}
-        <div
+        <StatCard
+          title="Total Cash on Hand"
+          value={formatCurrency(data?.totalCashOnHand || 0, tenant?.currency)}
+          subtitle={`Pooled across ${data?.accounts.length || 0} fund accounts`}
+          icon={Wallet}
+          color="emerald"
           onClick={() => onNavigate('/accounts')}
-          className="cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-5 shadow-2xs hover:border-emerald-300 transition"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Total Cash on Hand
-            </span>
-            <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
-              <Wallet className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-slate-900">
-              {formatCurrency(data?.totalCashOnHand || 0, tenant?.currency)}
-            </span>
-          </div>
-          <p className="mt-1 text-[11px] text-slate-500">
-            Pooled across {data?.accounts.length || 0} fund accounts
-          </p>
-        </div>
+        />
 
-        {/* Card 2: Umusanzu Rate */}
-        <div
+        <StatCard
+          title="Monthly Dues Rate"
+          value={`${data?.currentMonthUmusanzuRate || 0}%`}
+          unit="Collected"
+          subtitle="Mandatory monthly assessment progress"
+          icon={TrendingUp}
+          color="blue"
+          progress={data?.currentMonthUmusanzuRate || 0}
           onClick={() => onNavigate('/contributions')}
-          className="cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-5 shadow-2xs hover:border-emerald-300 transition"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Monthly Dues Rate
-            </span>
-            <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900">
-              {data?.currentMonthUmusanzuRate || 0}%
-            </span>
-            <span className="text-xs font-semibold text-emerald-600">Collected</span>
-          </div>
-          {/* Progress bar */}
-          <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-              style={{ width: `${Math.min(100, data?.currentMonthUmusanzuRate || 0)}%` }}
-            />
-          </div>
-        </div>
+        />
 
-        {/* Card 3: Choir Members */}
-        <div
+        <StatCard
+          title="Active Members"
+          value={data?.activeMembers || 0}
+          unit={`/ ${data?.totalMembers || 0} enrolled`}
+          subtitle="Registered community members"
+          icon={Users}
+          color="purple"
           onClick={() => onNavigate('/members')}
-          className="cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-5 shadow-2xs hover:border-emerald-300 transition"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Active Members
-            </span>
-            <div className="rounded-xl bg-purple-50 p-2 text-purple-600">
-              <Users className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-slate-900">
-              {data?.activeMembers || 0}
-            </span>
-            <span className="text-xs text-slate-500 ml-1.5">
-              / {data?.totalMembers || 0} enrolled
-            </span>
-          </div>
-          <p className="mt-1 text-[11px] text-slate-500">
-            Soprano, Alto, Tenor, Bass
-          </p>
-        </div>
+        />
 
-        {/* Card 4: Upcoming Sessions */}
-        <div
+        <StatCard
+          title="Attendance Roster"
+          value={data?.upcomingSessions.length || 0}
+          unit="recent sessions"
+          subtitle="Disciplinary & check-in tracker"
+          icon={UserCheck}
+          color="amber"
           onClick={() => onNavigate('/attendance')}
-          className="cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-5 shadow-2xs hover:border-emerald-300 transition"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Attendance Roster
-            </span>
-            <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
-              <UserCheck className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-slate-900">
-              {data?.upcomingSessions.length || 0}
-            </span>
-            <span className="text-xs text-slate-500 ml-1.5">recent sessions</span>
-          </div>
-          <p className="mt-1 text-[11px] text-slate-500">
-            Disciplinary & check-in tracker
-          </p>
-        </div>
+        />
       </div>
 
       {/* Account Balances Ribbon */}

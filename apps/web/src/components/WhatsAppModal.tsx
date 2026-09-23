@@ -57,7 +57,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
           <div className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-emerald-600" />
             <h2 className="text-sm font-bold text-slate-900">
-              Export for WhatsApp Choir Group
+              Export for Community WhatsApp Group
             </h2>
           </div>
           <button
@@ -70,7 +70,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
 
         <div className="p-6">
           <p className="text-xs text-slate-500 mb-3">
-            Copy this formatted message and paste it directly into your WhatsApp or Telegram choir community:
+            Copy this formatted message and paste it directly into your WhatsApp or Telegram community:
           </p>
 
           <div className="relative">

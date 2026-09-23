@@ -181,7 +181,7 @@ export const getMatrix = async (
           where: { periodId: { in: periodIds } },
         },
       },
-      orderBy: [{ voicePart: 'asc' }, { fullName: 'asc' }],
+      orderBy: [{ fullName: 'asc' }],
     });
 
     // Initialize period totals
@@ -271,7 +271,6 @@ export const getMatrix = async (
           phone: member.phone,
           email: member.email,
           gender: member.gender,
-          voicePart: member.voicePart,
           status: member.status,
           creditBalance: Number(member.creditBalance),
           createdAt: member.createdAt.toISOString(),

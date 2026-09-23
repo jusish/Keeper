@@ -100,14 +100,14 @@ _Raporo yakozwe na Keeper App kuri ${new Date().toLocaleDateString()}_`;
 • Amafaranga yakoreshejwe (Expenses): *${totalExpenses.toLocaleString()} ${tenant.currency}*
 • Asigaye kuri konti (Net): *${(totalCollected - totalExpenses).toLocaleString()} ${tenant.currency}*
 ━━━━━━━━━━━━━━━━━━━
-_Keeper - Community & Choir Operations_`;
+_Keeper - Community Operations_`;
     } else if (type === 'ATTENDANCE' && id) {
       const session = await prisma.attendanceSession.findFirst({
         where: { id: String(id), tenantId },
         include: {
           records: {
             include: { member: true },
-            orderBy: [{ member: { voicePart: 'asc' } }, { member: { fullName: 'asc' } }],
+            orderBy: [{ member: { fullName: 'asc' } }],
           },
         },
       });

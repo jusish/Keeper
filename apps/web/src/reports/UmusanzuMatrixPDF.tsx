@@ -68,15 +68,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   colMember: {
-    width: '18%',
+    width: '24%',
     padding: 3,
     paddingLeft: 4,
-  },
-  colVoice: {
-    width: '6%',
-    padding: 3,
-    textAlign: 'center',
-    color: '#64748b',
   },
   colMonth: {
     width: '5.2%',
@@ -166,7 +160,6 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
           {/* Header Row */}
           <View style={styles.tableHeader}>
             <Text style={styles.colMember}>Member Name</Text>
-            <Text style={styles.colVoice}>Voice</Text>
             {data.periods.map((p) => (
               <Text key={p.id} style={styles.colMonth}>
                 {p.label.split(' ')[0]}
@@ -183,8 +176,9 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
               key={row.member.id}
               style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : {}]}
             >
-              <Text style={styles.colMember}>{row.member.fullName}</Text>
-              <Text style={styles.colVoice}>{row.member.voicePart || '-'}</Text>
+              <Text style={styles.colMember}>
+                {row.member.fullName} {row.member.membershipCode ? `(${row.member.membershipCode})` : ''}
+              </Text>
 
               {data.periods.map((p) => {
                 const cell = row.cells[p.id];
@@ -225,7 +219,6 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
           {/* Footer Totals */}
           <View style={styles.footerRow}>
             <Text style={styles.colMember}>Grand Totals ({data.rows.length} members)</Text>
-            <Text style={styles.colVoice}>-</Text>
             {data.periods.map((p) => (
               <Text key={p.id} style={styles.colMonth}>
                 {data.totalsByPeriod[p.id]?.collected?.toLocaleString() || '0'}
@@ -243,7 +236,7 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
             <Text>Prepared by: Accountant / Treasurer</Text>
           </View>
           <View style={styles.sigBox}>
-            <Text>Verified by: Discipline Committee</Text>
+            <Text>Verified by: Audit Committee</Text>
           </View>
           <View style={styles.sigBox}>
             <Text>Approved by: President / Chairperson</Text>

@@ -78,7 +78,6 @@ model Member {
   phone          String?
   email          String?
   gender         Gender       @default(OTHER)
-  voicePart      String? // Soprano, Alto, Tenor, Bass
   status         MemberStatus @default(ACTIVE)
   joinedDate     DateTime?    @default(now())
   notes          String?
@@ -300,8 +299,8 @@ model PaymentAllocation {
 }
 
 enum ExpenseCategory {
-  COACH_TRAINER
-  UNIFORM_FABRIC
+  FACILITATOR_TRAINER
+  MATERIALS_SUPPLIES
   SOUND_EQUIPMENT
   VENUE_LOGISTICS
   TRANSPORT
@@ -345,11 +344,10 @@ model ExpenseAccountSplit {
 }
 
 enum SessionType {
-  REGULAR_PRACTICE
-  INTERCESSION_PRAYER
-  SUNDAY_SERVICE
-  CONCERT_CALL
+  REGULAR_MEETING
   COMMITTEE_MEETING
+  WORKSHOP_TRAINING
+  COMMUNITY_WORK
   SPECIAL_EVENT
 }
 
@@ -364,7 +362,7 @@ model AttendanceSession {
   tenantId           String
   tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   title              String
-  sessionType        SessionType   @default(REGULAR_PRACTICE)
+  sessionType        SessionType   @default(REGULAR_MEETING)
   sessionDate        DateTime
   startTime          String?
   endTime            String?

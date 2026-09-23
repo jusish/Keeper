@@ -50,7 +50,6 @@ export interface MemberDTO {
   phone?: string | null;
   email?: string | null;
   gender: Gender;
-  voicePart?: string | null;
   status: MemberStatus;
   joinedDate?: string | null;
   notes?: string | null;

@@ -73,7 +73,7 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
   // Member form state
   const [memName, setMemName] = useState('');
   const [memPhone, setMemPhone] = useState('');
-  const [memVoice, setMemVoice] = useState('Soprano');
+  const [memEmail, setMemEmail] = useState('');
   const [memGender, setMemGender] = useState<Gender>(Gender.FEMALE);
   const [memCode, setMemCode] = useState('');
 
@@ -234,12 +234,12 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
       await api.post('/members', {
         fullName: memName,
         phone: memPhone || undefined,
-        voicePart: memVoice,
+        email: memEmail || undefined,
         gender: memGender,
         membershipCode: memCode || undefined,
       });
 
-      setSuccessMessage('Member registered into the choir roster!');
+      setSuccessMessage('Member registered into the community roster!');
       if (onSuccess) onSuccess();
       setTimeout(() => {
         onClose();
@@ -337,7 +337,7 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                   <option value="">-- Choose Member --</option>
                   {members.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.fullName} ({m.voicePart || 'Choir Member'}) {m.membershipCode ? `[${m.membershipCode}]` : ''}
+                      {m.fullName} {m.membershipCode ? `[${m.membershipCode}]` : ''}
                     </option>
                   ))}
                 </select>
@@ -525,12 +525,12 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                     onChange={(e) => setExpCategory(e.target.value as ExpenseCategory)}
                     className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
                   >
-                    <option value={ExpenseCategory.COACH_TRAINER}>Vocal Coach / Conductor</option>
-                    <option value={ExpenseCategory.UNIFORM_FABRIC}>Uniform & Tailoring</option>
+                    <option value={ExpenseCategory.FACILITATOR_TRAINER}>Facilitator / Trainer</option>
+                    <option value={ExpenseCategory.MATERIALS_SUPPLIES}>Materials & Supplies</option>
                     <option value={ExpenseCategory.SOUND_EQUIPMENT}>Sound & Instruments</option>
                     <option value={ExpenseCategory.VENUE_LOGISTICS}>Hall & Production</option>
-                    <option value={ExpenseCategory.TRANSPORT}>Transport & Bus</option>
-                    <option value={ExpenseCategory.REFRESHMENTS}>Refreshments / Food</option>
+                    <option value={ExpenseCategory.TRANSPORT}>Transport & Logistics</option>
+                    <option value={ExpenseCategory.REFRESHMENTS}>Refreshments / Catering</option>
                     <option value={ExpenseCategory.WELFARE_BENEVOLENCE}>Member Welfare / Solidarity</option>
                     <option value={ExpenseCategory.OTHER}>Other Operational</option>
                   </select>
@@ -660,22 +660,6 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700">Voice Part / Section</label>
-                  <select
-                    value={memVoice}
-                    onChange={(e) => setMemVoice(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
-                  >
-                    <option value="Soprano">Soprano</option>
-                    <option value="Alto">Alto</option>
-                    <option value="Tenor">Tenor</option>
-                    <option value="Bass">Bass</option>
-                    <option value="Musician">Instrumentalist</option>
-                    <option value="Committee">Leadership / Staff</option>
-                  </select>
-                </div>
-
-                <div>
                   <label className="block text-xs font-bold text-slate-700">Gender</label>
                   <select
                     value={memGender}
@@ -686,6 +670,17 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                     <option value={Gender.MALE}>Male</option>
                     <option value={Gender.OTHER}>Other</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Membership Code (Optional)</label>
+                  <input
+                    type="text"
+                    value={memCode}
+                    onChange={(e) => setMemCode(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono"
+                    placeholder="e.g. MEM-045"
+                  />
                 </div>
               </div>
 
@@ -701,13 +696,13 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">Membership Code</label>
+                  <label className="block text-xs font-semibold text-slate-700">Email Address (Optional)</label>
                   <input
-                    type="text"
-                    value={memCode}
-                    onChange={(e) => setMemCode(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono"
-                    placeholder="e.g. KOR-045"
+                    type="email"
+                    value={memEmail}
+                    onChange={(e) => setMemEmail(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
+                    placeholder="member@example.com"
                   />
                 </div>
               </div>

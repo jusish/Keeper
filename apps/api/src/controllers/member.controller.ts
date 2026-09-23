@@ -22,17 +22,13 @@ export const getMembers = async (
       ];
     }
 
-    if (voicePart && typeof voicePart === 'string') {
-      where.voicePart = voicePart;
-    }
-
     if (status && typeof status === 'string') {
       where.status = status;
     }
 
     const members = await prisma.member.findMany({
       where,
-      orderBy: [{ voicePart: 'asc' }, { fullName: 'asc' }],
+      orderBy: [{ fullName: 'asc' }],
     });
 
     res.json(
@@ -44,7 +40,6 @@ export const getMembers = async (
         phone: m.phone,
         email: m.email,
         gender: m.gender,
-        voicePart: m.voicePart,
         status: m.status,
         joinedDate: m.joinedDate?.toISOString(),
         notes: m.notes,
@@ -111,7 +106,6 @@ export const getMemberById = async (
         phone: member.phone,
         email: member.email,
         gender: member.gender,
-        voicePart: member.voicePart,
         status: member.status,
         joinedDate: member.joinedDate?.toISOString(),
         notes: member.notes,
@@ -166,7 +160,6 @@ export const createMember = async (
           phone: input.phone,
           email: input.email || null,
           gender: input.gender,
-          voicePart: input.voicePart,
           status: input.status,
           joinedDate: input.joinedDate ? new Date(input.joinedDate) : new Date(),
           notes: input.notes,
@@ -221,7 +214,6 @@ export const updateMember = async (
         phone: input.phone,
         email: input.email || null,
         gender: input.gender,
-        voicePart: input.voicePart,
         status: input.status,
         joinedDate: input.joinedDate ? new Date(input.joinedDate) : undefined,
         notes: input.notes,

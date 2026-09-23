@@ -35,7 +35,7 @@ export const Logo: React.FC<LogoProps> = ({ className = '', size = 32, showText 
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           </span>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700/80">
-            Community & Choir
+            Community Platform
           </span>
         </div>
       )}

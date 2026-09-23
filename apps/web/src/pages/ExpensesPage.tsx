@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils';
+import { StatCard } from '../components/common/StatCard';
 import {
   Receipt,
   Plus,
@@ -12,6 +13,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Building,
+  AlertCircle,
+  Clock,
 } from 'lucide-react';
 import { ExpenseCategory } from '@keeper/shared';
 
@@ -78,7 +81,7 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({
             Expenses & Outflow Accounting
           </h1>
           <p className="text-xs text-slate-500">
-            Planned retainers (vocal coaches) vs. unplanned purchases, with multi-account splits.
+            Pre-planned budget allocations vs. operational purchases, with atomic multi-account splits.
           </p>
         </div>
 
@@ -94,36 +97,39 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({
       </div>
 
       {/* KPI Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Total Outflows
-          </span>
-          <p className="mt-1 text-xl font-black text-rose-700 font-mono">
-            {formatCurrency(totalSpent, tenant?.currency)}
-          </p>
-          <span className="text-[11px] text-slate-500">{expenses.length} transactions logged</span>
-        </div>
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-            Pre-Budgeted / Planned
-          </span>
-          <p className="mt-1 text-xl font-black text-slate-900 font-mono">
-            {formatCurrency(totalPlanned, tenant?.currency)}
-          </p>
-          <span className="text-[11px] text-emerald-600 font-semibold">
-            {totalSpent > 0 ? Math.round((totalPlanned / totalSpent) * 100) : 0}% of budget
-          </span>
-        </div>
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
-            Spontaneous / Unplanned
-          </span>
-          <p className="mt-1 text-xl font-black text-amber-900 font-mono">
-            {formatCurrency(totalUnplanned, tenant?.currency)}
-          </p>
-          <span className="text-[11px] text-amber-600 font-semibold">Operational logistics</span>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Outflows"
+          value={formatCurrency(totalSpent, tenant?.currency)}
+          subtitle={`${expenses.length} transactions logged`}
+          icon={Receipt}
+          color="rose"
+          valueColor="text-rose-700"
+        />
+        <StatCard
+          title="Pre-Budgeted / Planned"
+          value={formatCurrency(totalPlanned, tenant?.currency)}
+          subtitle={`${totalSpent > 0 ? Math.round((totalPlanned / totalSpent) * 100) : 0}% of budget`}
+          icon={CheckCircle2}
+          color="emerald"
+          valueColor="text-emerald-700"
+          progress={totalSpent > 0 ? Math.round((totalPlanned / totalSpent) * 100) : 0}
+        />
+        <StatCard
+          title="Operational / Spontaneous"
+          value={formatCurrency(totalUnplanned, tenant?.currency)}
+          subtitle="Operational logistics"
+          icon={AlertCircle}
+          color="amber"
+          valueColor="text-amber-700"
+        />
+        <StatCard
+          title="Total Vouchers"
+          value={expenses.length}
+          subtitle="Audited expense records"
+          icon={Clock}
+          color="slate"
+        />
       </div>
 
       {/* Filters Toolbar */}
@@ -162,13 +168,13 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({
             className="rounded-lg border border-slate-200 bg-slate-50 py-1.5 px-3 text-xs focus:outline-none font-medium"
           >
             <option value="ALL">All Categories</option>
-            <option value={ExpenseCategory.COACH_TRAINER}>Vocal Coach</option>
-            <option value={ExpenseCategory.UNIFORM_FABRIC}>Uniform & Fabric</option>
-            <option value={ExpenseCategory.SOUND_EQUIPMENT}>Sound Equipment</option>
+            <option value={ExpenseCategory.FACILITATOR_TRAINER}>Facilitator / Trainer</option>
+            <option value={ExpenseCategory.MATERIALS_SUPPLIES}>Materials & Supplies</option>
+            <option value={ExpenseCategory.SOUND_EQUIPMENT}>Sound & Tech Equipment</option>
             <option value={ExpenseCategory.VENUE_LOGISTICS}>Hall & Logistics</option>
             <option value={ExpenseCategory.TRANSPORT}>Transport</option>
             <option value={ExpenseCategory.REFRESHMENTS}>Refreshments</option>
-            <option value={ExpenseCategory.WELFARE_BENEVOLENCE}>Welfare</option>
+            <option value={ExpenseCategory.WELFARE_BENEVOLENCE}>Welfare & Community Aid</option>
           </select>
         </div>
       </div>
