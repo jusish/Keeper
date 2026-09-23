@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { StatCard } from '../components/common/StatCard';
 import { SearchableSelect, SearchableOption } from '../components/common/SearchableSelect';
+import { Modal } from '../components/common/Modal';
 import {
   Wallet,
   Plus,
@@ -345,91 +346,89 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
       )}
 
       {/* Create Account Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-900">Add Treasury Fund Account</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Create an account to hold designated funds (e.g., Uniform Account, Bank of Kigali, MoMo Cashbox).
-            </p>
-            <form onSubmit={handleCreateAccount} className="mt-4 space-y-3">
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)}>
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+          <h3 className="text-sm font-bold text-slate-900">Add Treasury Fund Account</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Create an account to hold designated funds (e.g., Uniform Account, Bank of Kigali, MoMo Cashbox).
+          </p>
+          <form onSubmit={handleCreateAccount} className="mt-4 space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Account Name *</label>
+              <input
+                type="text"
+                required
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="e.g. Uniforms Account 2026"
+                className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-bold text-slate-700">Account Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. Uniforms Account 2026"
-                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
+                <label className="block text-xs font-bold text-slate-700 mb-1">Account Type</label>
+                <SearchableSelect
+                  options={[
+                    { value: AccountType.GENERAL_DUES, label: 'General Dues Fund' },
+                    { value: AccountType.EVENT_PROJECT, label: 'Event / Project Fund' },
+                    { value: AccountType.MOBILE_MONEY, label: 'Mobile Money (MoMo)' },
+                    { value: AccountType.BANK_ACCOUNT, label: 'Bank Account' },
+                    { value: AccountType.PETTY_CASH, label: 'Cash on Hand' },
+                  ]}
+                  value={newType}
+                  onChange={(val) => setNewType(val as AccountType)}
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">Account Type</label>
-                  <select
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value as AccountType)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
-                  >
-                    <option value={AccountType.GENERAL_DUES}>General Dues Fund</option>
-                    <option value={AccountType.EVENT_PROJECT}>Event / Project Fund</option>
-                    <option value={AccountType.MOBILE_MONEY}>Mobile Money (MoMo)</option>
-                    <option value={AccountType.BANK_ACCOUNT}>Bank Account</option>
-                    <option value={AccountType.PETTY_CASH}>Cash on Hand</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">Initial Balance</label>
-                  <input
-                    type="number"
-                    value={newBalance}
-                    onChange={(e) => setNewBalance(Number(e.target.value))}
-                    className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs font-bold font-mono"
-                  />
-                </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700">Account / Phone / IBAN #</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Initial Balance</label>
                 <input
-                  type="text"
-                  value={newNumber}
-                  onChange={(e) => setNewNumber(e.target.value)}
-                  placeholder="e.g. *182*8*1*..."
-                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs font-mono"
+                  type="number"
+                  value={newBalance}
+                  onChange={(e) => setNewBalance(Number(e.target.value))}
+                  className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold font-mono"
                 />
               </div>
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="newIsDef"
-                  checked={newIsDefault}
-                  onChange={(e) => setNewIsDefault(e.target.checked)}
-                  className="h-4 w-4 rounded text-emerald-600"
-                />
-                <label htmlFor="newIsDef" className="text-xs text-slate-700 cursor-pointer">
-                  Set as default receiving account
-                </label>
-              </div>
-              <div className="mt-4 flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="rounded-lg border px-3 py-1.5 text-xs text-slate-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
-                >
-                  Save Account
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Account / Phone / IBAN #</label>
+              <input
+                type="text"
+                value={newNumber}
+                onChange={(e) => setNewNumber(e.target.value)}
+                placeholder="e.g. *182*8*1*..."
+                className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs font-mono"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="newIsDef"
+                checked={newIsDefault}
+                onChange={(e) => setNewIsDefault(e.target.checked)}
+                className="h-4 w-4 rounded text-emerald-600"
+              />
+              <label htmlFor="newIsDef" className="text-xs text-slate-700 cursor-pointer">
+                Set as default receiving account
+              </label>
+            </div>
+            <div className="mt-4 flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="rounded-lg border px-3 py-1.5 text-xs text-slate-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+              >
+                Save Account
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

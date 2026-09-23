@@ -348,3 +348,77 @@ export const acceptInvitation = async (
     next(error);
   }
 };
+
+export const getTenantUsers = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const tenantId = getActiveTenantId(req);
+    const users = await prisma.user.findMany({
+      where: { tenantId },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(users);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteInvitation = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const tenantId = getActiveTenantId(req);
+    await prisma.invitation.deleteMany({
+      where: { id, tenantId },
+    });
+    res.json({ message: 'Invitation deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateTenantUserRole = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const { role } = req.body;
+    const tenantId = getActiveTenantId(req);
+
+    if (id === req.user?.id) {
+      res.status(400).json({ message: 'You cannot change your own role' });
+      return;
+    }
+
+    const updated = await prisma.user.updateMany({
+      where: { id, tenantId },
+      data: { role },
+    });
+
+    if (updated.count === 0) {
+      res.status(404).json({ message: 'User not found in this community' });
+      return;
+    }
+
+    res.json({ message: 'User role updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../lib/utils';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import { StatCard } from '../components/common/StatCard';
+import { SearchableSelect } from '../components/common/SearchableSelect';
+import { Modal } from '../components/common/Modal';
 import { pdf } from '@react-pdf/renderer';
 import { AttendanceSessionPDF } from '../reports/AttendanceSessionPDF';
 import {
@@ -795,168 +797,164 @@ export const AttendancePage: React.FC = () => {
       )}
 
       {/* Cancel Session Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-900">Cancel Session for the Entire Community / Group</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Provide a clear reason (e.g., severe weather, holiday, emergency). The session will remain in the calendar marked as Cancelled.
-            </p>
-            <div className="mt-4">
-              <label className="block text-xs font-bold text-slate-700">Cancellation Reason *</label>
-              <textarea
+      <Modal isOpen={showCancelModal} onClose={() => setShowCancelModal(false)}>
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+          <h3 className="text-sm font-bold text-slate-900">Cancel Session for the Entire Community / Group</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Provide a clear reason (e.g., severe weather, holiday, emergency). The session will remain in the calendar marked as Cancelled.
+          </p>
+          <div className="mt-4">
+            <label className="block text-xs font-bold text-slate-700">Cancellation Reason *</label>
+            <textarea
+              required
+              rows={3}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="e.g. Inclement weather making travel unsafe..."
+              className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
+            />
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowCancelModal(false)}
+              className="rounded-lg border px-3 py-1.5 text-xs text-slate-600"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelSession}
+              className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-rose-700"
+            >
+              Confirm Cancellation
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Schedule Session Modal */}
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)}>
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+          <h3 className="text-sm font-bold text-slate-900">Schedule Community Activity / Session</h3>
+          <form onSubmit={handleCreateSession} className="mt-4 space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Session Title *</label>
+              <input
+                type="text"
                 required
-                rows={3}
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="e.g. Inclement weather making travel unsafe..."
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="e.g. Tuesday General Assembly"
                 className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
               />
             </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowCancelModal(false)}
-                className="rounded-lg border px-3 py-1.5 text-xs text-slate-600"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={handleCancelSession}
-                className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-rose-700"
-              >
-                Confirm Cancellation
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Schedule Session Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-900">Schedule Community Activity / Session</h3>
-            <form onSubmit={handleCreateSession} className="mt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-bold text-slate-700">Session Title *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Session Type</label>
+                <SearchableSelect
+                  options={[
+                    { value: SessionType.REGULAR_MEETING, label: 'General Assembly / Meeting' },
+                    { value: SessionType.COMMITTEE_MEETING, label: 'Committee Meeting' },
+                    { value: SessionType.WORKSHOP_TRAINING, label: 'Workshop / Training' },
+                    { value: SessionType.COMMUNITY_WORK, label: 'Community Work / Activity' },
+                    { value: SessionType.SPECIAL_EVENT, label: 'Special Event' },
+                  ]}
+                  value={newType}
+                  onChange={(val) => setNewType(val as SessionType)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700">Date *</label>
                 <input
-                  type="text"
+                  type="date"
                   required
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. Tuesday General Assembly"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">Session Type</label>
-                  <select
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value as SessionType)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
-                  >
-                    <option value={SessionType.REGULAR_MEETING}>General Assembly / Meeting</option>
-                    <option value={SessionType.COMMITTEE_MEETING}>Committee Meeting</option>
-                    <option value={SessionType.WORKSHOP_TRAINING}>Workshop / Training</option>
-                    <option value={SessionType.COMMUNITY_WORK}>Community Work / Activity</option>
-                    <option value={SessionType.SPECIAL_EVENT}>Special Event</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
-                  />
-                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-bold text-slate-700">Start Time</label>
+                <input
+                  type="time"
+                  value={newStartTime}
+                  onChange={(e) => setNewStartTime(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">Start Time</label>
-                  <input
-                    type="time"
-                    value={newStartTime}
-                    onChange={(e) => setNewStartTime(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">End Time</label>
-                  <input
-                    type="time"
-                    value={newEndTime}
-                    onChange={(e) => setNewEndTime(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700">End Time</label>
+                <input
+                  type="time"
+                  value={newEndTime}
+                  onChange={(e) => setNewEndTime(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-xs"
+                />
               </div>
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="rec"
-                    checked={newIsRecurring}
-                    onChange={(e) => setNewIsRecurring(e.target.checked)}
-                    className="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <label htmlFor="rec" className="text-xs text-slate-700 font-semibold cursor-pointer">
-                    Repeating session series (Automatic schedule generator)
-                  </label>
-                </div>
+            </div>
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="rec"
+                  checked={newIsRecurring}
+                  onChange={(e) => setNewIsRecurring(e.target.checked)}
+                  className="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500"
+                />
+                <label htmlFor="rec" className="text-xs text-slate-700 font-semibold cursor-pointer">
+                  Repeating session series (Automatic schedule generator)
+                </label>
+              </div>
 
-                {newIsRecurring && (
-                  <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700">Frequency</label>
-                      <select
-                        value={recurrenceFreq}
-                        onChange={(e) => setRecurrenceFreq(e.target.value as any)}
-                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-xs"
-                      >
-                        <option value="WEEKLY">Weekly (Every 7 days)</option>
-                        <option value="BIWEEKLY">Bi-Weekly (Every 14 days)</option>
-                        <option value="MONTHLY">Monthly (Every 30 days)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700">Occurrences Count</label>
-                      <input
-                        type="number"
-                        min="2"
-                        max="24"
-                        value={recurrenceCount}
-                        onChange={(e) => setRecurrenceCount(Number(e.target.value))}
-                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-xs font-mono"
-                      />
-                    </div>
+              {newIsRecurring && (
+                <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Frequency</label>
+                    <SearchableSelect
+                      options={[
+                        { value: 'WEEKLY', label: 'Weekly (Every 7 days)' },
+                        { value: 'BIWEEKLY', label: 'Bi-Weekly (Every 14 days)' },
+                        { value: 'MONTHLY', label: 'Monthly (Every 30 days)' },
+                      ]}
+                      value={recurrenceFreq}
+                      onChange={(val) => setRecurrenceFreq(val as any)}
+                    />
                   </div>
-                )}
-              </div>
-              <div className="mt-4 flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="rounded-lg border px-3 py-1.5 text-xs text-slate-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
-                >
-                  Schedule Session
-                </button>
-              </div>
-            </form>
-          </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Occurrences Count</label>
+                    <input
+                      type="number"
+                      min="2"
+                      max="24"
+                      value={recurrenceCount}
+                      onChange={(e) => setRecurrenceCount(Number(e.target.value))}
+                      className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs font-mono"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="rounded-lg border px-3 py-1.5 text-xs text-slate-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+              >
+                Schedule Session
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </Modal>
 
       {/* WhatsApp Modal */}
       {selectedSessionId && (

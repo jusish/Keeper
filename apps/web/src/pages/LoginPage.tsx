@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from '../components/Logo';
+import { SearchableSelect } from '../components/common/SearchableSelect';
 import {
   LogIn,
   UserPlus,
@@ -63,8 +64,8 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-3 sm:p-6 lg:p-10 font-sans">
       <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden grid lg:grid-cols-12 min-h-[640px]">
-        {/* Left Column: Branded Illustration & Feature Highlights */}
-        <div className="lg:col-span-6 xl:col-span-7 bg-gradient-to-br from-emerald-800 via-emerald-900 to-teal-950 p-8 lg:p-12 text-white flex flex-col justify-between relative overflow-hidden">
+        {/* Left Column: Branded Illustration & Feature Highlights (Hidden on mobile, only form shown) */}
+        <div className="hidden lg:flex lg:col-span-6 xl:col-span-7 bg-gradient-to-br from-emerald-800 via-emerald-900 to-teal-950 p-8 lg:p-12 text-white flex-col justify-between relative overflow-hidden">
           {/* Subtle Background Decorative SVG Circles & Glows */}
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
@@ -73,7 +74,7 @@ export const LoginPage: React.FC = () => {
           <div className="relative z-10">
             <div className="flex items-center gap-3">
               <div className="bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/20 shadow-inner">
-                <Logo size={36} />
+                <Logo size={36} showText={false} />
               </div>
               <div>
                 <span className="text-xl font-black tracking-tight text-white flex items-center gap-1.5">
@@ -141,7 +142,7 @@ export const LoginPage: React.FC = () => {
                   <circle cx="68" cy="155" r="14" fill="#ecfdf5" />
                   <circle cx="68" cy="152" r="5" fill="#059669" />
                   <path d="M 60 164 Q 68 158 76 164" stroke="#059669" strokeWidth="2" fill="none" />
-                  <rect x="90" y="148" width="40" height="6" rx="3" fill="#0f172a" />
+                  <rect x="90" y="148" width="40" height="6" rx="3" fill="#059669" />
                   <rect x="90" y="160" width="30" height="5" rx="2.5" fill="#94a3b8" />
                   <text x="52" y="192" fill="#047857" fontSize="9" fontWeight="bold">120+ Active</text>
                 </g>
@@ -151,7 +152,7 @@ export const LoginPage: React.FC = () => {
                   <rect x="350" y="135" width="115" height="74" rx="16" fill="#ffffff" />
                   <circle cx="380" cy="160" r="14" fill="#eff6ff" />
                   <path d="M380 151 L389 154 V162 C389 167 380 171 380 171 C380 171 371 167 371 162 V154 Z" fill="#3b82f6" />
-                  <rect x="402" y="152" width="50" height="6" rx="3" fill="#0f172a" />
+                  <rect x="402" y="152" width="50" height="6" rx="3" fill="#2563eb" />
                   <rect x="402" y="164" width="35" height="5" rx="2.5" fill="#94a3b8" />
                   <text x="364" y="196" fill="#1d4ed8" fontSize="9" fontWeight="bold">Tamper Proof</text>
                 </g>
@@ -192,8 +193,13 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Clean Light-Themed Login / Register Form */}
-        <div className="lg:col-span-6 xl:col-span-5 bg-white p-6 sm:p-10 flex flex-col justify-center">
+        {/* Right Column: Clean Light-Themed Login / Register Form (Full width on mobile) */}
+        <div className="col-span-12 lg:col-span-6 xl:col-span-5 bg-white p-6 sm:p-10 flex flex-col justify-center">
+          {/* Mobile-only brand logo */}
+          <div className="lg:hidden flex items-center justify-center gap-2 mb-6">
+            <Logo size={36} />
+          </div>
+
           <div className="mb-6">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">
               {isRegistering ? 'Register Community' : 'Welcome Back'}
@@ -241,17 +247,17 @@ export const LoginPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700">Currency</label>
-                    <select
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Currency</label>
+                    <SearchableSelect
+                      options={[
+                        { value: 'RWF', label: 'RWF (Rwanda)' },
+                        { value: 'USD', label: 'USD ($)' },
+                        { value: 'KES', label: 'KES (Kenya)' },
+                        { value: 'UGX', label: 'UGX (Uganda)' },
+                      ]}
                       value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-xs text-slate-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition"
-                    >
-                      <option value="RWF">RWF (Rwanda)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="KES">KES (Kenya)</option>
-                      <option value="UGX">UGX (Uganda)</option>
-                    </select>
+                      onChange={setCurrency}
+                    />
                   </div>
                 </div>
               </>

@@ -21,15 +21,20 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   titleRow: {
-    flexDirection: 'row',
+    flexDirection: 'column' as const,
+    gap: 4,
+  },
+  metaRow: {
+    flexDirection: 'row' as const,
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    marginTop: 4,
   },
   title: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#064e3b',
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
   },
   subtitle: {
     fontSize: 9,
@@ -39,7 +44,7 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 8,
     color: '#64748b',
-    textAlign: 'right',
+    textAlign: 'right' as const,
   },
   kpiRow: {
     flexDirection: 'row',
@@ -174,12 +179,13 @@ export const AccountLedgerPDF: React.FC<AccountLedgerPDFProps> = ({
                 Account: {account?.name} ({account?.type}) • Number: {account?.accountNumber || 'Primary Vault'}
               </Text>
             </View>
-            <View>
-              <Text style={styles.metaText}>Generated on: {new Date().toLocaleDateString('en-GB')}</Text>
-              <Text style={styles.metaText}>Official Statement</Text>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaText}>Balance: {Number(account?.balance || 0).toLocaleString()} {currency}</Text>
+              <Text style={styles.metaText}>Generated: {new Date().toLocaleDateString('en-GB')}</Text>
             </View>
           </View>
         </View>
+
 
         {/* KPI Row */}
         <View style={styles.kpiRow}>

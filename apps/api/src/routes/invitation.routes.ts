@@ -5,6 +5,9 @@ import {
   resendInvitation,
   validateInvitationToken,
   acceptInvitation,
+  getTenantUsers,
+  deleteInvitation,
+  updateTenantUserRole,
 } from '../controllers/invitation.controller.js';
 import { requireAuth, requireRole } from '../middlewares/auth.middleware.js';
 import { Role } from '@keeper/shared';
@@ -15,12 +18,17 @@ const router = Router();
 router.get('/validate', validateInvitationToken);
 router.post('/accept', acceptInvitation);
 
-// Protected routes (for tenant admins)
+// Protected routes (for tenant admins and managers)
 router.use(requireAuth);
-router.use(requireRole(Role.ADMIN, Role.SUPER_ADMIN));
 
-router.post('/', createInvitation);
+// Team Users
+router.get('/users', getTenantUsers);
+router.patch('/users/:id/role', requireRole(Role.ADMIN, Role.SUPER_ADMIN), updateTenantUserRole);
+
+// Invitations
 router.get('/', getInvitations);
-router.post('/:id/resend', resendInvitation);
+router.post('/', requireRole(Role.ADMIN, Role.SUPER_ADMIN), createInvitation);
+router.post('/:id/resend', requireRole(Role.ADMIN, Role.SUPER_ADMIN), resendInvitation);
+router.delete('/:id', requireRole(Role.ADMIN, Role.SUPER_ADMIN), deleteInvitation);
 
 export default router;

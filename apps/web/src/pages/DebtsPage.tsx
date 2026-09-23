@@ -9,6 +9,8 @@ import {
   PaymentMethod,
 } from '@keeper/shared';
 import { StatCard } from '../components/common/StatCard';
+import { SearchableSelect } from '../components/common/SearchableSelect';
+import { Modal } from '../components/common/Modal';
 import {
   Landmark,
   Plus,
@@ -318,18 +320,20 @@ export const DebtsPage: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-400" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium focus:border-rose-500 focus:outline-none bg-white"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active (No payments)</option>
-            <option value="PARTIALLY_PAID">Partially Paid</option>
-            <option value="FULLY_PAID">Fully Paid</option>
-          </select>
+        <div className="flex items-center gap-2 w-52">
+          <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+          <div className="flex-1">
+            <SearchableSelect
+              options={[
+                { value: 'ALL', label: 'All Statuses' },
+                { value: 'ACTIVE', label: 'Active (No payments)' },
+                { value: 'PARTIALLY_PAID', label: 'Partially Paid' },
+                { value: 'FULLY_PAID', label: 'Fully Paid' },
+              ]}
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val || 'ALL')}
+            />
+          </div>
         </div>
       </div>
 
@@ -534,158 +538,156 @@ export const DebtsPage: React.FC = () => {
       </div>
 
       {/* MODAL 1: RECORD NEW DEBT */}
-      {isRecordDebtOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-rose-50 p-2 text-rose-700">
-                  <Landmark className="h-5 w-5" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-900">Record New Borrowing / Debt (Ideni)</h3>
+      <Modal isOpen={isRecordDebtOpen} onClose={() => setIsRecordDebtOpen(false)}>
+        <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-rose-50 p-2 text-rose-700">
+                <Landmark className="h-5 w-5" />
               </div>
-              <button
-                onClick={() => setIsRecordDebtOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
-              >
-                ✕
-              </button>
+              <h3 className="text-sm font-bold text-slate-900">Record New Borrowing / Debt (Ideni)</h3>
+            </div>
+            <button
+              onClick={() => setIsRecordDebtOpen(false)}
+              className="text-slate-400 hover:text-slate-600 text-lg font-bold"
+            >
+              ✕
+            </button>
+          </div>
+
+          {debtError && (
+            <div className="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-800 border border-red-200">
+              {debtError}
+            </div>
+          )}
+
+          <form onSubmit={handleCreateDebt} className="space-y-3.5">
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Lender Name *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Elder Emmanuel Habimana, Bank of Kigali, Parish Office"
+                value={lenderName}
+                onChange={(e) => setLenderName(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-rose-500 focus:outline-none"
+              />
             </div>
 
-            {debtError && (
-              <div className="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-800 border border-red-200">
-                {debtError}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateDebt} className="space-y-3.5">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700">Lender Name *</label>
+                <label className="block text-xs font-bold text-slate-700">Lender Contact Phone</label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. Elder Emmanuel Habimana, Bank of Kigali, Parish Office"
-                  value={lenderName}
-                  onChange={(e) => setLenderName(e.target.value)}
+                  placeholder="+250 788 123 456"
+                  value={lenderContact}
+                  onChange={(e) => setLenderContact(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-rose-500 focus:outline-none"
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">Lender Contact Phone</label>
-                  <input
-                    type="text"
-                    placeholder="+250 788 123 456"
-                    value={lenderContact}
-                    onChange={(e) => setLenderContact(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-rose-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">Amount Borrowed ({tenant?.currency}) *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    placeholder="e.g. 500000"
-                    value={principalAmount}
-                    onChange={(e) => setPrincipalAmount(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-rose-700 focus:border-rose-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block text-xs font-bold text-slate-700">Purpose / Title *</label>
+                <label className="block text-xs font-bold text-slate-700">Amount Borrowed ({tenant?.currency}) *</label>
                 <input
-                  type="text"
+                  type="number"
                   required
-                  placeholder="e.g. Advance deposit for Easter Concert sound system rental"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  min="1"
+                  placeholder="e.g. 500000"
+                  value={principalAmount}
+                  onChange={(e) => setPrincipalAmount(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-rose-700 focus:border-rose-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Purpose / Title *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Advance deposit for Easter Concert sound system rental"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-rose-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700">Borrow Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={borrowDate}
+                  onChange={(e) => setBorrowDate(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-rose-500 focus:outline-none"
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">Borrow Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={borrowDate}
-                    onChange={(e) => setBorrowDate(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-rose-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">Agreed Due Date (Optional)</label>
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-rose-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block text-xs font-bold text-slate-700">
-                  Destination Treasury Account (Optional)
-                </label>
-                <select
-                  value={depositAccountId}
-                  onChange={(e) => setDepositAccountId(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-rose-500 focus:outline-none bg-white font-medium"
-                >
-                  <option value="">Do not deposit (Funds spent directly off-ledger)</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} (Current: {a.balance.toLocaleString()} {tenant?.currency})
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  💡 If an account is selected, its balance will <span className="font-bold text-emerald-700">automatically increase</span> by the borrowed amount.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700">Additional Notes / Terms</label>
-                <textarea
-                  rows={2}
-                  placeholder="Terms, agreed repayment conditions, or meeting resolution reference..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                <label className="block text-xs font-bold text-slate-700">Agreed Due Date (Optional)</label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-rose-500 focus:outline-none"
                 />
               </div>
+            </div>
 
-              <div className="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsRecordDebtOpen(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingDebt}
-                  className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
-                >
-                  {submittingDebt ? 'Recording...' : 'Record Borrowing'}
-                </button>
-              </div>
-            </form>
-          </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Destination Treasury Account (Optional)
+              </label>
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'Do not deposit (Funds spent directly off-ledger)' },
+                  ...accounts.map((a) => ({
+                    value: a.id,
+                    label: `${a.name} (Current: ${a.balance.toLocaleString()} ${tenant?.currency})`,
+                  })),
+                ]}
+                value={depositAccountId}
+                onChange={setDepositAccountId}
+                placeholder="Select destination account..."
+              />
+              <p className="mt-1 text-[11px] text-slate-500">
+                💡 If an account is selected, its balance will <span className="font-bold text-emerald-700">automatically increase</span> by the borrowed amount.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Additional Notes / Terms</label>
+              <textarea
+                rows={2}
+                placeholder="Terms, agreed repayment conditions, or meeting resolution reference..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-rose-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setIsRecordDebtOpen(false)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submittingDebt}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                {submittingDebt ? 'Recording...' : 'Record Borrowing'}
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </Modal>
 
       {/* MODAL 2: REPAY DEBT */}
-      {isRepaymentOpen && selectedDebtForRepayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+      <Modal isOpen={isRepaymentOpen && !!selectedDebtForRepayment} onClose={() => setIsRepaymentOpen(false)}>
+        {selectedDebtForRepayment && (
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2">
@@ -756,19 +758,16 @@ export const DebtsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700">Source Treasury Account *</label>
-                <select
-                  required
+                <label className="block text-xs font-bold text-slate-700 mb-1">Source Treasury Account *</label>
+                <SearchableSelect
+                  options={accounts.map((a) => ({
+                    value: a.id,
+                    label: `${a.name} — Balance: ${a.balance.toLocaleString()} ${tenant?.currency}`,
+                  }))}
                   value={sourceAccountId}
-                  onChange={(e) => setSourceAccountId(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-emerald-500 focus:outline-none bg-white font-medium"
-                >
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} — Balance: {a.balance.toLocaleString()} {tenant?.currency}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSourceAccountId}
+                  placeholder="Select source account..."
+                />
                 <p className="mt-1 text-[11px] text-slate-500">
                   💡 This account will <span className="font-bold text-rose-700">automatically decrease</span> by the repayment amount.
                 </p>
@@ -776,17 +775,17 @@ export const DebtsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700">Payment Method *</label>
-                  <select
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Method *</label>
+                  <SearchableSelect
+                    options={[
+                      { value: PaymentMethod.MOBILE_MONEY, label: 'Mobile Money (MoMo)' },
+                      { value: PaymentMethod.BANK_TRANSFER, label: 'Bank Transfer' },
+                      { value: PaymentMethod.CASH, label: 'Cash Handover' },
+                      { value: PaymentMethod.OTHER, label: 'Check / Other' },
+                    ]}
                     value={repaymentMethod}
-                    onChange={(e) => setRepaymentMethod(e.target.value as PaymentMethod)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-emerald-500 focus:outline-none bg-white font-medium"
-                  >
-                    <option value={PaymentMethod.MOBILE_MONEY}>Mobile Money (MoMo)</option>
-                    <option value={PaymentMethod.BANK_TRANSFER}>Bank Transfer</option>
-                    <option value={PaymentMethod.CASH}>Cash Handover</option>
-                    <option value={PaymentMethod.OTHER}>Check / Other</option>
-                  </select>
+                    onChange={(val) => setRepaymentMethod(val as PaymentMethod)}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700">Reference / Receipt Number</label>
@@ -829,8 +828,8 @@ export const DebtsPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 };

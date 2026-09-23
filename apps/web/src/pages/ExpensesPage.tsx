@@ -3,6 +3,7 @@ import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { StatCard } from '../components/common/StatCard';
+import { SearchableSelect } from '../components/common/SearchableSelect';
 import {
   Receipt,
   Plus,
@@ -203,20 +204,23 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({
           </div>
 
           {/* Category Dropdown */}
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-slate-50 py-1.5 px-3 text-xs focus:outline-none font-medium"
-          >
-            <option value="ALL">All Categories</option>
-            <option value={ExpenseCategory.FACILITATOR_TRAINER}>Facilitator / Trainer</option>
-            <option value={ExpenseCategory.MATERIALS_SUPPLIES}>Materials & Supplies</option>
-            <option value={ExpenseCategory.SOUND_EQUIPMENT}>Sound & Tech Equipment</option>
-            <option value={ExpenseCategory.VENUE_LOGISTICS}>Hall & Logistics</option>
-            <option value={ExpenseCategory.TRANSPORT}>Transport</option>
-            <option value={ExpenseCategory.REFRESHMENTS}>Refreshments</option>
-            <option value={ExpenseCategory.WELFARE_BENEVOLENCE}>Welfare & Community Aid</option>
-          </select>
+          <div className="w-56">
+            <SearchableSelect
+              options={[
+                { value: 'ALL', label: 'All Categories' },
+                { value: ExpenseCategory.FACILITATOR_TRAINER, label: 'Facilitator / Trainer' },
+                { value: ExpenseCategory.MATERIALS_SUPPLIES, label: 'Materials & Supplies' },
+                { value: ExpenseCategory.SOUND_EQUIPMENT, label: 'Sound & Tech Equipment' },
+                { value: ExpenseCategory.VENUE_LOGISTICS, label: 'Hall & Logistics' },
+                { value: ExpenseCategory.TRANSPORT, label: 'Transport' },
+                { value: ExpenseCategory.REFRESHMENTS, label: 'Refreshments' },
+                { value: ExpenseCategory.WELFARE_BENEVOLENCE, label: 'Welfare & Community Aid' },
+                { value: ExpenseCategory.OTHER, label: 'Other Expenses' },
+              ]}
+              value={categoryFilter}
+              onChange={(val) => setCategoryFilter(val || 'ALL')}
+            />
+          </div>
         </div>
       </div>
 

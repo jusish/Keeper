@@ -13,6 +13,7 @@ import {
   ScrollText,
   Shield,
   Landmark,
+  UserCog,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -39,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { label: 'Debts & Borrowings', path: '/debts', icon: Landmark },
     { label: 'Attendance & Discipline', path: '/attendance', icon: UserCheck },
     { label: 'Community Members', path: '/members', icon: Users },
+    { label: 'Team & Access', path: '/team', icon: UserCog },
     { label: 'Audit Trail', path: '/audit', icon: ScrollText },
   ];
 

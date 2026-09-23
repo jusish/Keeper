@@ -29,6 +29,7 @@ import {
 } from '@keeper/shared';
 import { StatCard } from '../components/common/StatCard';
 import { SearchableSelect, SearchableOption } from '../components/common/SearchableSelect';
+import { Modal } from '../components/common/Modal';
 
 interface ContributionsPageProps {
   onOpenQuickActions: (tab: string) => void;
@@ -643,9 +644,8 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
       )}
 
       {/* CREATE CONTRIBUTION PLAN MODAL */}
-      {showCreatePlanModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-200">
+      <Modal isOpen={showCreatePlanModal} onClose={() => setShowCreatePlanModal(false)}>
+        <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Create Contribution Plan</h3>
@@ -675,16 +675,16 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Cycle / Frequency</label>
-                  <select
+                  <SearchableSelect
+                    options={[
+                      { value: PlanCycle.MONTHLY, label: 'Monthly (12 periods)' },
+                      { value: PlanCycle.WEEKLY, label: 'Weekly (52 periods)' },
+                      { value: PlanCycle.QUARTERLY, label: 'Quarterly (4 periods)' },
+                      { value: PlanCycle.YEARLY, label: 'Yearly (Annual Lump Sum)' },
+                    ]}
                     value={newPlanCycle}
-                    onChange={(e) => setNewPlanCycle(e.target.value as PlanCycle)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none"
-                  >
-                    <option value={PlanCycle.MONTHLY}>Monthly (12 periods)</option>
-                    <option value={PlanCycle.WEEKLY}>Weekly (52 periods)</option>
-                    <option value={PlanCycle.QUARTERLY}>Quarterly (4 periods)</option>
-                    <option value={PlanCycle.YEARLY}>Yearly (Annual Lump Sum)</option>
-                  </select>
+                    onChange={(val) => setNewPlanCycle(val as PlanCycle)}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Calendar Year</label>
@@ -788,8 +788,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </Modal>
 
       {/* WhatsApp Modal */}
       {data && (

@@ -479,36 +479,31 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
               {(payTargetType === 'UMUSANZU_SINGLE' || payTargetType === 'UMUSANZU_YEAR_ADVANCE') && plans.length > 0 && (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Select Contribution Program *</label>
-                  <select
+                  <SearchableSelect
+                    options={plans.map((p) => ({
+                      value: p.id,
+                      label: `${p.title} (${p.cycle} • ${p.defaultAmount.toLocaleString()} ${tenant?.currency})`,
+                    }))}
                     value={payPlanId}
-                    onChange={(e) => handlePlanSelect(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold focus:border-emerald-500 focus:outline-none"
-                    required
-                  >
-                    {plans.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title} ({p.cycle} • {p.defaultAmount.toLocaleString()} {tenant?.currency})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={handlePlanSelect}
+                    placeholder="Select program..."
+                  />
                 </div>
               )}
 
               {/* Specific Period for UMUSANZU_SINGLE */}
               {payTargetType === 'UMUSANZU_SINGLE' && plans.length > 0 && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">Starting Period</label>
-                  <select
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Starting Period</label>
+                  <SearchableSelect
+                    options={((plans.find((p) => p.id === payPlanId) || plans[0])?.periods || []).map((p: any) => ({
+                      value: p.id,
+                      label: p.label,
+                    }))}
                     value={payPeriodId}
-                    onChange={(e) => setPayPeriodId(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-emerald-500 focus:outline-none"
-                  >
-                    {(plans.find((p) => p.id === payPlanId) || plans[0])?.periods?.map((p: any) => (
-                      <option key={p.id} value={p.id}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setPayPeriodId}
+                    placeholder="Select starting period..."
+                  />
                   <p className="mt-1 text-[10px] text-slate-400">
                     Any extra amount paid automatically cascades to subsequent periods (no surpluses).
                   </p>
@@ -517,22 +512,19 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
 
               {payTargetType === 'EVENT_SUBEVENT' && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">Select Event Project / Uniform Fee</label>
-                  <select
-                    value={paySubEventId}
-                    onChange={(e) => handleSubEventSelect(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-emerald-500 focus:outline-none"
-                    required
-                  >
-                    <option value="">-- Choose Event Fee Item --</option>
-                    {events.map((ev) =>
-                      ev.subEvents?.map((se: any) => (
-                        <option key={se.id} value={se.id}>
-                          {ev.title} → {se.title} ({se.defaultAmount?.toLocaleString()} {tenant?.currency})
-                        </option>
-                      ))
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Select Event Project / Uniform Fee</label>
+                  <SearchableSelect
+                    options={events.flatMap((ev) =>
+                      (ev.subEvents || []).map((se: any) => ({
+                        value: se.id,
+                        label: `${ev.title} → ${se.title}`,
+                        badge: `${se.defaultAmount?.toLocaleString()} ${tenant?.currency}`,
+                      }))
                     )}
-                  </select>
+                    value={paySubEventId}
+                    onChange={handleSubEventSelect}
+                    placeholder="-- Choose Event Fee Item --"
+                  />
                 </div>
               )}
 
@@ -550,35 +542,33 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700">Destination Account *</label>
-                  <select
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Destination Account *</label>
+                  <SearchableSelect
+                    options={accounts.map((a) => ({
+                      value: a.id,
+                      label: a.name,
+                      badge: `${a.balance?.toLocaleString()} ${tenant?.currency}`,
+                    }))}
                     value={payAccountId}
-                    onChange={(e) => setPayAccountId(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-emerald-500 focus:outline-none font-medium"
-                    required
-                  >
-                    {accounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} ({a.balance?.toLocaleString()} {tenant?.currency})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setPayAccountId}
+                    placeholder="Select destination account..."
+                  />
                 </div>
               </div>
 
               {/* Payment Method & Reference */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">Payment Channel</label>
-                  <select
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Channel</label>
+                  <SearchableSelect
+                    options={[
+                      { value: PaymentMethod.MOBILE_MONEY, label: 'Mobile Money (MoMo)' },
+                      { value: PaymentMethod.CASH, label: 'Cash (In-person)' },
+                      { value: PaymentMethod.BANK_TRANSFER, label: 'Bank Transfer' },
+                    ]}
                     value={payMethod}
-                    onChange={(e) => setPayMethod(e.target.value as PaymentMethod)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
-                  >
-                    <option value={PaymentMethod.MOBILE_MONEY}>Mobile Money (MoMo)</option>
-                    <option value={PaymentMethod.CASH}>Cash (In-person)</option>
-                    <option value={PaymentMethod.BANK_TRANSFER}>Bank Transfer</option>
-                  </select>
+                    onChange={(val) => setPayMethod(val as PaymentMethod)}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700">Tx Reference / Slip #</label>
@@ -630,21 +620,21 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700">Category</label>
-                  <select
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
+                  <SearchableSelect
+                    options={[
+                      { value: ExpenseCategory.FACILITATOR_TRAINER, label: 'Facilitator / Trainer' },
+                      { value: ExpenseCategory.MATERIALS_SUPPLIES, label: 'Materials & Supplies' },
+                      { value: ExpenseCategory.SOUND_EQUIPMENT, label: 'Sound & Instruments' },
+                      { value: ExpenseCategory.VENUE_LOGISTICS, label: 'Hall & Production' },
+                      { value: ExpenseCategory.TRANSPORT, label: 'Transport & Logistics' },
+                      { value: ExpenseCategory.REFRESHMENTS, label: 'Refreshments / Catering' },
+                      { value: ExpenseCategory.WELFARE_BENEVOLENCE, label: 'Member Welfare / Solidarity' },
+                      { value: ExpenseCategory.OTHER, label: 'Other Operational' },
+                    ]}
                     value={expCategory}
-                    onChange={(e) => setExpCategory(e.target.value as ExpenseCategory)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
-                  >
-                    <option value={ExpenseCategory.FACILITATOR_TRAINER}>Facilitator / Trainer</option>
-                    <option value={ExpenseCategory.MATERIALS_SUPPLIES}>Materials & Supplies</option>
-                    <option value={ExpenseCategory.SOUND_EQUIPMENT}>Sound & Instruments</option>
-                    <option value={ExpenseCategory.VENUE_LOGISTICS}>Hall & Production</option>
-                    <option value={ExpenseCategory.TRANSPORT}>Transport & Logistics</option>
-                    <option value={ExpenseCategory.REFRESHMENTS}>Refreshments / Catering</option>
-                    <option value={ExpenseCategory.WELFARE_BENEVOLENCE}>Member Welfare / Solidarity</option>
-                    <option value={ExpenseCategory.OTHER}>Other Operational</option>
-                  </select>
+                    onChange={(val) => setExpCategory(val as ExpenseCategory)}
+                  />
                 </div>
               </div>
 
@@ -692,17 +682,17 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
 
                 {!expIsSplit ? (
                   <div>
-                    <select
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Source Account</label>
+                    <SearchableSelect
+                      options={accounts.map((a) => ({
+                        value: a.id,
+                        label: a.name,
+                        badge: `${a.balance?.toLocaleString()} ${tenant?.currency}`,
+                      }))}
                       value={expSingleAccountId}
-                      onChange={(e) => setExpSingleAccountId(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
-                    >
-                      {accounts.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name} (Balance: {a.balance?.toLocaleString()} {tenant?.currency})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setExpSingleAccountId}
+                      placeholder="Select source account..."
+                    />
                   </div>
                 ) : (
                   <div className="space-y-2 pt-1">
@@ -711,22 +701,22 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                     </p>
                     {expSplits.map((split, idx) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <select
-                          value={split.accountId}
-                          onChange={(e) => {
-                            const newSplits = [...expSplits];
-                            newSplits[idx].accountId = e.target.value;
-                            setExpSplits(newSplits);
-                          }}
-                          className="flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs"
-                        >
-                          <option value="">-- Choose Account --</option>
-                          {accounts.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex-1">
+                          <SearchableSelect
+                            options={accounts.map((a) => ({
+                              value: a.id,
+                              label: a.name,
+                              badge: `${a.balance?.toLocaleString()} ${tenant?.currency}`,
+                            }))}
+                            value={split.accountId}
+                            onChange={(val) => {
+                              const newSplits = [...expSplits];
+                              newSplits[idx].accountId = val;
+                              setExpSplits(newSplits);
+                            }}
+                            placeholder="-- Choose Account --"
+                          />
+                        </div>
                         <input
                           type="number"
                           placeholder="Amount"
@@ -771,16 +761,16 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700">Gender</label>
-                  <select
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Gender</label>
+                  <SearchableSelect
+                    options={[
+                      { value: Gender.FEMALE, label: 'Female' },
+                      { value: Gender.MALE, label: 'Male' },
+                      { value: Gender.OTHER, label: 'Other' },
+                    ]}
                     value={memGender}
-                    onChange={(e) => setMemGender(e.target.value as Gender)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
-                  >
-                    <option value={Gender.FEMALE}>Female</option>
-                    <option value={Gender.MALE}>Male</option>
-                    <option value={Gender.OTHER}>Other</option>
-                  </select>
+                    onChange={(val) => setMemGender(val as Gender)}
+                  />
                 </div>
 
                 <div>
@@ -904,17 +894,17 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                       <label className="block text-xs font-bold text-slate-700 mb-1">
                         Select Session to Take Roll-Call *
                       </label>
-                      <select
+                      <SearchableSelect
+                        options={sessions.map((s) => ({
+                          value: s.id,
+                          label: s.title,
+                          sublabel: `${new Date(s.sessionDate).toLocaleDateString()} ${s.startTime ? `(${s.startTime})` : ''}`,
+                          badge: s.status,
+                        }))}
                         value={attSessionId}
-                        onChange={(e) => setAttSessionId(e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold focus:border-emerald-500 focus:outline-none"
-                      >
-                        {sessions.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.title} — {new Date(s.sessionDate).toLocaleDateString()} {s.startTime ? `(${s.startTime})` : ''} [{s.status}]
-                          </option>
-                        ))}
-                      </select>
+                        onChange={setAttSessionId}
+                        placeholder="Choose session..."
+                      />
 
                       <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600 space-y-1">
                         <p className="font-bold text-slate-800">Quick Navigation</p>
@@ -953,18 +943,18 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700">Session Type</label>
-                      <select
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Session Type</label>
+                      <SearchableSelect
+                        options={[
+                          { value: SessionType.REGULAR_MEETING, label: 'Regular Meeting / Gathering' },
+                          { value: SessionType.COMMITTEE_MEETING, label: 'Committee Meeting' },
+                          { value: SessionType.WORKSHOP_TRAINING, label: 'Workshop / Training' },
+                          { value: SessionType.COMMUNITY_WORK, label: 'Community Work / Activity' },
+                          { value: SessionType.SPECIAL_EVENT, label: 'Special Event' },
+                        ]}
                         value={attType}
-                        onChange={(e) => setAttType(e.target.value as SessionType)}
-                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
-                      >
-                        <option value={SessionType.REGULAR_MEETING}>Regular Meeting / Gathering</option>
-                        <option value={SessionType.COMMITTEE_MEETING}>Committee Meeting</option>
-                        <option value={SessionType.WORKSHOP_TRAINING}>Workshop / Training</option>
-                        <option value={SessionType.COMMUNITY_WORK}>Community Work / Activity</option>
-                        <option value={SessionType.SPECIAL_EVENT}>Special Event</option>
-                      </select>
+                        onChange={(val) => setAttType(val as SessionType)}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-700">Session Date *</label>

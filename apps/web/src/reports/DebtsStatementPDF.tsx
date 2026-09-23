@@ -21,15 +21,20 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   titleRow: {
-    flexDirection: 'row',
+    flexDirection: 'column' as const,
+    gap: 4,
+  },
+  metaRow: {
+    flexDirection: 'row' as const,
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    marginTop: 4,
   },
   title: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#064e3b',
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
   },
   subtitle: {
     fontSize: 9,
@@ -39,7 +44,7 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 8,
     color: '#64748b',
-    textAlign: 'right',
+    textAlign: 'right' as const,
   },
   kpiRow: {
     flexDirection: 'row',
@@ -170,9 +175,9 @@ export const DebtsStatementPDF: React.FC<DebtsStatementPDFProps> = ({
                 Total Liabilities: {debts.length} Records • Outstanding: {Number(summary?.totalOutstanding || 0).toLocaleString()} {currency}
               </Text>
             </View>
-            <View>
-              <Text style={styles.metaText}>Generated on: {new Date().toLocaleDateString('en-GB')}</Text>
+            <View style={styles.metaRow}>
               <Text style={styles.metaText}>Official Treasury Statement</Text>
+              <Text style={styles.metaText}>Generated: {new Date().toLocaleDateString('en-GB')}</Text>
             </View>
           </View>
         </View>

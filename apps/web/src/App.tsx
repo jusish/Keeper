@@ -14,6 +14,7 @@ import { AuditLogsPage } from './pages/AuditLogsPage';
 import { SuperAdminPortal } from './pages/admin/SuperAdminPortal';
 import { DebtsPage } from './pages/DebtsPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
+import { TeamPage } from './pages/TeamPage';
 
 export const App: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -149,6 +150,9 @@ export const App: React.FC = () => {
           onOpenQuickActions={handleOpenQuickActions}
         />
       );
+    }
+    if (currentPath === '/team') {
+      return <TeamPage key={refreshKey} />;
     }
     return (
       <DashboardPage

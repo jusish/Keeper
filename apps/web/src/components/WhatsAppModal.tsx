@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { X, Copy, Check, MessageSquare } from 'lucide-react';
+import { Modal } from './common/Modal';
 
 interface WhatsAppModalProps {
   isOpen: boolean;
@@ -29,10 +30,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
     setIsLoading(true);
     try {
       const res = await api.get('/reports/whatsapp-summary', {
-        params: {
-          type: reportType,
-          id: targetId,
-        },
+        params: { type: reportType, id: targetId },
       });
       setContent(res.data.summaryText);
     } catch (err) {
@@ -48,10 +46,8 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+    <Modal isOpen={isOpen} onClose={onClose}>
       <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl border border-slate-200">
         <div className="flex items-center justify-between border-b border-slate-100 bg-emerald-50/50 px-6 py-4">
           <div className="flex items-center gap-2">
@@ -72,7 +68,6 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
           <p className="text-xs text-slate-500 mb-3">
             Copy this formatted message and paste it directly into your WhatsApp or Telegram community:
           </p>
-
           <div className="relative">
             <textarea
               readOnly
@@ -80,7 +75,6 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
               className="h-64 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-[11px] text-slate-800 leading-relaxed focus:outline-none resize-none"
             />
           </div>
-
           <div className="mt-4 flex items-center justify-end gap-2">
             <button
               onClick={onClose}
@@ -93,20 +87,14 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition"
             >
               {copied ? (
-                <>
-                  <Check className="h-4 w-4" />
-                  Copied to Clipboard!
-                </>
+                <><Check className="h-4 w-4" />Copied to Clipboard!</>
               ) : (
-                <>
-                  <Copy className="h-4 w-4" />
-                  Copy WhatsApp Message
-                </>
+                <><Copy className="h-4 w-4" />Copy WhatsApp Message</>
               )}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

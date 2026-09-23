@@ -23,15 +23,20 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   titleRow: {
-    flexDirection: 'row',
+    flexDirection: 'column' as const,
+    gap: 4,
+  },
+  metaRow: {
+    flexDirection: 'row' as const,
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    marginTop: 4,
   },
   title: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#064e3b',
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
   },
   subtitle: {
     fontSize: 9,
@@ -41,7 +46,7 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 8,
     color: '#64748b',
-    textAlign: 'right',
+    textAlign: 'right' as const,
   },
   table: {
     width: '100%',
@@ -154,11 +159,11 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
                 {data.predecessorPlanTitle ? ` • Carried from: ${data.predecessorPlanTitle}` : ''}
               </Text>
             </View>
-            <View>
-              <Text style={styles.metaText}>Generated on: {new Date().toLocaleDateString('en-GB')}</Text>
+            <View style={styles.metaRow}>
               <Text style={styles.metaText}>
                 Collection Rate: {data.overallCollectionRate}% ({Number(data.grandTotalCollected).toLocaleString()} / {Number(data.grandTotalExpected).toLocaleString()} {currency})
               </Text>
+              <Text style={styles.metaText}>Generated: {new Date().toLocaleDateString('en-GB')}</Text>
             </View>
           </View>
         </View>
