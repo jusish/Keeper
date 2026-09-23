@@ -172,9 +172,12 @@ model ContributionPlan {
   startDate       DateTime
   endDate         DateTime?
   isActive        Boolean            @default(true)
-  targetAccountId String?
-  targetAccount   Account?           @relation(fields: [targetAccountId], references: [id], onDelete: SetNull)
-  periods         ContributionPeriod[]
+  targetAccountId   String?
+  targetAccount     Account?             @relation(fields: [targetAccountId], references: [id], onDelete: SetNull)
+  predecessorPlanId String?
+  predecessorPlan   ContributionPlan?    @relation("PlanSuccession", fields: [predecessorPlanId], references: [id], onDelete: SetNull)
+  successorPlans    ContributionPlan[]   @relation("PlanSuccession")
+  periods           ContributionPeriod[]
 
   @@index([tenantId])
 }

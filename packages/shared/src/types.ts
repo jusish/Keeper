@@ -88,6 +88,8 @@ export interface ContributionPlanDTO {
   endDate?: string | null;
   isActive: boolean;
   targetAccountId?: string | null;
+  predecessorPlanId?: string | null;
+  predecessorPlanTitle?: string | null;
   periods?: ContributionPeriodDTO[];
 }
 
@@ -110,6 +112,8 @@ export interface ContributionMatrixRow {
   totalSurplus: number;
   totalRemaining: number;
   advanceCredit: number;
+  previousArrears: number;
+  totalDueWithArrears: number;
   overallStatus: AssessmentStatus;
 }
 
@@ -132,6 +136,8 @@ export interface ContributionMatrixResponse {
   grandTotalSurplus: number;
   grandTotalAdvance: number;
   grandTotalRemaining: number;
+  grandTotalPreviousArrears: number;
+  predecessorPlanTitle?: string | null;
   overallCollectionRate: number;
 }
 

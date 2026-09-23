@@ -28,6 +28,7 @@ import {
   PlanCycle,
 } from '@keeper/shared';
 import { StatCard } from '../components/common/StatCard';
+import { SearchableSelect, SearchableOption } from '../components/common/SearchableSelect';
 
 interface ContributionsPageProps {
   onOpenQuickActions: (tab: string) => void;
@@ -43,6 +44,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'SETTLED' | 'ARREARS' | 'ADVANCE'>('ALL');
+  const [periodSlice, setPeriodSlice] = useState<'ALL' | 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'H1' | 'H2'>('ALL');
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
@@ -54,6 +56,8 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
   const [newPlanAmount, setNewPlanAmount] = useState<number>(5000);
   const [newPlanYear, setNewPlanYear] = useState<number>(new Date().getFullYear());
   const [newPlanAccountId, setNewPlanAccountId] = useState<string>('');
+  const [hasPredecessor, setHasPredecessor] = useState(false);
+  const [predecessorPlanId, setPredecessorPlanId] = useState<string>('');
   const [isSubmittingPlan, setIsSubmittingPlan] = useState(false);
 
   useEffect(() => {
@@ -122,10 +126,13 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
         defaultAmount: Number(newPlanAmount),
         year: Number(newPlanYear),
         targetAccountId: newPlanAccountId || undefined,
+        predecessorPlanId: hasPredecessor && predecessorPlanId ? predecessorPlanId : undefined,
       });
 
       setShowCreatePlanModal(false);
       setNewPlanTitle('');
+      setHasPredecessor(false);
+      setPredecessorPlanId('');
       if (res.data?.plan?.id) {
         const createdId = res.data.plan.id;
         setSelectedPlanId(createdId);
@@ -140,6 +147,44 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
     }
   };
 
+  const activePeriods = React.useMemo(() => {
+    if (!data?.periods) return [];
+    if (periodSlice === 'ALL') return data.periods;
+
+    const total = data.periods.length;
+    if (periodSlice === 'Q1') {
+      if (total === 12) return data.periods.slice(0, 3);
+      if (total === 52) return data.periods.slice(0, 13);
+      if (total === 4) return data.periods.slice(0, 1);
+      return data.periods.slice(0, Math.ceil(total / 4));
+    }
+    if (periodSlice === 'Q2') {
+      if (total === 12) return data.periods.slice(3, 6);
+      if (total === 52) return data.periods.slice(13, 26);
+      if (total === 4) return data.periods.slice(1, 2);
+      return data.periods.slice(Math.ceil(total / 4), Math.ceil(total / 2));
+    }
+    if (periodSlice === 'Q3') {
+      if (total === 12) return data.periods.slice(6, 9);
+      if (total === 52) return data.periods.slice(26, 39);
+      if (total === 4) return data.periods.slice(2, 3);
+      return data.periods.slice(Math.ceil(total / 2), Math.ceil((3 * total) / 4));
+    }
+    if (periodSlice === 'Q4') {
+      if (total === 12) return data.periods.slice(9, 12);
+      if (total === 52) return data.periods.slice(39, 52);
+      if (total === 4) return data.periods.slice(3, 4);
+      return data.periods.slice(Math.ceil((3 * total) / 4));
+    }
+    if (periodSlice === 'H1') {
+      return data.periods.slice(0, Math.ceil(total / 2));
+    }
+    if (periodSlice === 'H2') {
+      return data.periods.slice(Math.ceil(total / 2));
+    }
+    return data.periods;
+  }, [data?.periods, periodSlice]);
+
   const handleExportPdf = async () => {
     if (!data) return;
     setIsExportingPdf(true);
@@ -149,13 +194,15 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
           data={data}
           tenantName={tenant?.name || 'Community Organization'}
           currency={tenant?.currency || 'RWF'}
+          filteredPeriods={activePeriods}
+          periodLabel={periodSlice !== 'ALL' ? periodSlice : undefined}
         />
       ).toBlob();
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Contribution_Matrix_${data.plan.title.replace(/\s+/g, '_')}.pdf`;
+      link.download = `Contribution_Matrix_${data.plan.title.replace(/\s+/g, '_')}${periodSlice !== 'ALL' ? `_${periodSlice}` : ''}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -165,6 +212,13 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
       setIsExportingPdf(false);
     }
   };
+
+  const planOptions: SearchableOption[] = plans.map((p) => ({
+    value: p.id,
+    label: p.title,
+    sublabel: `${p.cycle} • ${formatCurrency(p.defaultAmount, tenant?.currency)}${p.predecessorPlanTitle ? ` • From: ${p.predecessorPlanTitle}` : ''}`,
+    badge: p.isActive ? 'Active' : 'Closed',
+  }));
 
   const filteredRows = (data?.rows || []).filter((row) => {
     const matchSearch =
@@ -185,32 +239,28 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
     <div className="space-y-5">
       {/* Plan Selector & Switcher Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 shadow-2xs">
-            <TableProperties className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Contribution Program / Plan Switcher
-            </span>
-            <div className="flex items-center gap-2 mt-1">
-              <select
-                value={selectedPlanId || ''}
-                onChange={(e) => handleSelectPlan(e.target.value)}
-                className="font-extrabold text-xs text-slate-900 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus:border-emerald-500 focus:bg-white outline-none transition cursor-pointer"
-              >
-                {plans.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title} ({p.cycle} • {formatCurrency(p.defaultAmount, tenant?.currency)})
-                  </option>
-                ))}
-              </select>
-              {data?.plan && (
-                <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-0.5 uppercase tracking-wide">
-                  {data.plan.cycle}
-                </span>
-              )}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 shadow-2xs shrink-0">
+              <TableProperties className="h-5 w-5" />
             </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                Contribution Program / Plan Switcher
+              </span>
+              <span className="text-xs font-extrabold text-slate-900">
+                {data?.plan?.title || 'Select Program'}
+              </span>
+            </div>
+          </div>
+          <div className="w-full sm:w-80">
+            <SearchableSelect
+              options={planOptions}
+              value={selectedPlanId || ''}
+              onChange={(val) => handleSelectPlan(val)}
+              placeholder="Search or select contribution program..."
+              searchPlaceholder="Search programs..."
+            />
           </div>
         </div>
 
@@ -328,8 +378,8 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
           </div>
 
           {/* Table Toolbar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl bg-white border border-slate-200 p-3 shadow-2xs">
-            <div className="relative w-full sm:w-72">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 rounded-xl bg-white border border-slate-200 p-3 shadow-2xs">
+            <div className="relative w-full md:w-64">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="text"
@@ -340,7 +390,28 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
               />
             </div>
 
-            <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto">
+            {/* Period Range Filter */}
+            <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 hidden lg:inline">
+                Period Range:
+              </span>
+              {(['ALL', 'Q1', 'Q2', 'Q3', 'Q4', 'H1', 'H2'] as const).map((slice) => (
+                <button
+                  key={slice}
+                  onClick={() => setPeriodSlice(slice)}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-bold transition whitespace-nowrap ${
+                    periodSlice === slice
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {slice === 'ALL' ? 'All Year' : slice}
+                </button>
+              ))}
+            </div>
+
+            {/* Member Status Filter */}
+            <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto">
               <button
                 onClick={() => setStatusFilter('ALL')}
                 className={`rounded-lg px-2.5 py-1 text-xs font-bold transition whitespace-nowrap ${
@@ -359,7 +430,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                     : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                 }`}
               >
-                Settled Up
+                Settled
               </button>
               <button
                 onClick={() => setStatusFilter('ARREARS')}
@@ -384,6 +455,28 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
             </div>
           </div>
 
+          {/* Predecessor Arrears Notice Banner */}
+          {((data.grandTotalPreviousArrears || 0) > 0 || data.plan.predecessorPlanTitle) && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-2 rounded-xl bg-amber-100 text-amber-800">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                    Prior Program Arrears Transfer Active
+                  </h4>
+                  <p className="text-xs text-amber-800 font-medium">
+                    This program inherits outstanding balances from <strong>{data.predecessorPlanTitle || 'Predecessor Program'}</strong>. Unsettled member dues are carried over into this year's ledger.
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-mono font-bold bg-white text-amber-900 border border-amber-300 px-3 py-1 rounded-full shadow-2xs whitespace-nowrap">
+                Carried: {formatCurrency(data.grandTotalPreviousArrears, tenant?.currency)}
+              </span>
+            </div>
+          )}
+
           {/* Dynamic Contribution Matrix Table */}
           <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full border-collapse text-left text-xs">
@@ -392,7 +485,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                   <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3 min-w-[180px] shadow-[1px_0_0_0_#e2e8f0]">
                     Member
                   </th>
-                  {data.periods.map((p) => (
+                  {activePeriods.map((p) => (
                     <th key={p.id} className="px-2.5 py-3 text-center min-w-[72px]">
                       <div>{p.label}</div>
                       <div className="text-[9px] font-normal text-slate-400">
@@ -400,95 +493,144 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                       </div>
                     </th>
                   ))}
-                  <th className="px-3 py-3 text-right bg-slate-100/50 min-w-[90px]">Paid</th>
-                  <th className="px-3 py-3 text-right bg-slate-100/50 min-w-[90px]">Remaining</th>
+                  <th className="px-3 py-3 text-right bg-slate-100/50 min-w-[85px]">Paid</th>
+                  {(data.grandTotalPreviousArrears || 0) > 0 && (
+                    <th className="px-3 py-3 text-right bg-amber-50/70 min-w-[90px] text-amber-900">
+                      Prior Arrears
+                    </th>
+                  )}
+                  <th className="px-3 py-3 text-right bg-slate-100/50 min-w-[85px]">Current Plan</th>
+                  <th className="px-3 py-3 text-right bg-rose-50/50 min-w-[90px] text-rose-900">Total Balance</th>
                   <th className="px-3 py-3 text-right bg-emerald-50/50 min-w-[100px]">Advance Credit (+)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredRows.map((row) => (
-                  <tr key={row.member.id} className="hover:bg-slate-50/80 transition group">
-                    <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-2.5 font-semibold text-slate-800 shadow-[1px_0_0_0_#e2e8f0]">
-                      <div className="truncate">{row.member.fullName}</div>
-                      {row.member.membershipCode && (
-                        <div className="text-[10px] font-mono text-slate-400 font-normal">
-                          {row.member.membershipCode}
-                        </div>
-                      )}
-                    </td>
+                {filteredRows.map((row) => {
+                  const hasPrior = (data.grandTotalPreviousArrears || 0) > 0;
+                  const rowPaidInSlice = activePeriods.reduce(
+                    (sum, p) => sum + (row.cells[p.id]?.paidAmount || 0),
+                    0
+                  );
+                  const rowRemainingInSlice = activePeriods.reduce(
+                    (sum, p) => sum + (row.cells[p.id]?.remainingAmount || 0),
+                    0
+                  );
+                  const totalDue = rowRemainingInSlice + (row.previousArrears || 0);
 
-                    {data.periods.map((p) => {
-                      const cell = row.cells[p.id];
-                      if (!cell) {
+                  return (
+                    <tr key={row.member.id} className="hover:bg-slate-50/80 transition group">
+                      <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-2.5 font-semibold text-slate-800 shadow-[1px_0_0_0_#e2e8f0]">
+                        <div className="truncate">{row.member.fullName}</div>
+                        {row.member.membershipCode && (
+                          <div className="text-[10px] font-mono text-slate-400 font-normal">
+                            {row.member.membershipCode}
+                          </div>
+                        )}
+                      </td>
+
+                      {activePeriods.map((p) => {
+                        const cell = row.cells[p.id];
+                        if (!cell) {
+                          return (
+                            <td key={p.id} className="px-2.5 py-2.5 text-center text-slate-300">
+                              —
+                            </td>
+                          );
+                        }
+
+                        let bg = 'bg-slate-50 text-slate-400';
+                        let label = '0';
+                        if (cell.isExempt || cell.expectedAmount === 0) {
+                          bg = 'bg-slate-100/90 text-slate-400 border border-slate-200/60 font-medium text-[10px]';
+                          label = 'N/A';
+                        } else if (cell.status === AssessmentStatus.PAID) {
+                          bg = 'bg-emerald-100/70 text-emerald-800 font-bold';
+                          label = '✓';
+                        } else if (cell.status === AssessmentStatus.PARTIAL) {
+                          bg = 'bg-amber-100/80 text-amber-900 font-bold';
+                          label = `${Math.round(cell.paidAmount / 1000)}k`;
+                        }
+
                         return (
-                          <td key={p.id} className="px-2.5 py-2.5 text-center text-slate-300">
-                            —
+                          <td key={p.id} className="px-1.5 py-2 text-center">
+                            <div
+                              className={`rounded-md py-1 px-1 text-[11px] transition ${bg}`}
+                              title={
+                                cell.isExempt || cell.expectedAmount === 0
+                                  ? `${row.member.fullName} - ${p.label}: Not applicable (joined later or exempt)`
+                                  : `${row.member.fullName} - ${p.label}: Paid ${cell.paidAmount} / ${cell.expectedAmount}`
+                              }
+                            >
+                              {label}
+                            </div>
                           </td>
                         );
-                      }
+                      })}
 
-                      let bg = 'bg-slate-50 text-slate-400';
-                      let label = '0';
-                      if (cell.isExempt || cell.expectedAmount === 0) {
-                        bg = 'bg-slate-100/90 text-slate-400 border border-slate-200/60 font-medium text-[10px]';
-                        label = 'N/A';
-                      } else if (cell.status === AssessmentStatus.PAID) {
-                        bg = 'bg-emerald-100/70 text-emerald-800 font-bold';
-                        label = '✓';
-                      } else if (cell.status === AssessmentStatus.PARTIAL) {
-                        bg = 'bg-amber-100/80 text-amber-900 font-bold';
-                        label = `${Math.round(cell.paidAmount / 1000)}k`;
-                      }
-
-                      return (
-                        <td key={p.id} className="px-1.5 py-2 text-center">
-                          <div
-                            className={`rounded-md py-1 px-1 text-[11px] transition ${bg}`}
-                            title={
-                              cell.isExempt || cell.expectedAmount === 0
-                                ? `${row.member.fullName} - ${p.label}: Not applicable (joined later or exempt)`
-                                : `${row.member.fullName} - ${p.label}: Paid ${cell.paidAmount} / ${cell.expectedAmount}`
-                            }
-                          >
-                            {label}
-                          </div>
+                      <td className="px-3 py-2.5 text-right font-bold text-slate-800 bg-slate-50/30 font-mono">
+                        {formatCurrency(rowPaidInSlice, tenant?.currency)}
+                      </td>
+                      {hasPrior && (
+                        <td className="px-3 py-2.5 text-right font-bold font-mono bg-amber-50/20 text-amber-900">
+                          {row.previousArrears > 0 ? formatCurrency(row.previousArrears, tenant?.currency) : '—'}
                         </td>
-                      );
-                    })}
-
-                    <td className="px-3 py-2.5 text-right font-bold text-slate-800 bg-slate-50/30 font-mono">
-                      {formatCurrency(row.totalPaid, tenant?.currency)}
-                    </td>
-                    <td
-                      className={`px-3 py-2.5 text-right font-bold font-mono bg-slate-50/30 ${
-                        row.totalRemaining > 0 ? 'text-rose-600' : 'text-slate-400'
-                      }`}
-                    >
-                      {formatCurrency(row.totalRemaining, tenant?.currency)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right font-bold text-emerald-700 font-mono bg-emerald-50/20">
-                      {(row.advanceCredit || row.member?.creditBalance) > 0
-                        ? `+${formatCurrency(row.advanceCredit || row.member?.creditBalance, tenant?.currency)}`
-                        : '—'}
-                    </td>
-                  </tr>
-                ))}
+                      )}
+                      <td
+                        className={`px-3 py-2.5 text-right font-bold font-mono bg-slate-50/30 ${
+                          rowRemainingInSlice > 0 ? 'text-rose-600' : 'text-slate-400'
+                        }`}
+                      >
+                        {formatCurrency(rowRemainingInSlice, tenant?.currency)}
+                      </td>
+                      <td
+                        className={`px-3 py-2.5 text-right font-bold font-mono bg-rose-50/20 ${
+                          totalDue > 0 ? 'text-rose-700' : 'text-slate-400'
+                        }`}
+                      >
+                        {formatCurrency(totalDue, tenant?.currency)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-bold text-emerald-700 font-mono bg-emerald-50/20">
+                        {(row.advanceCredit || row.member?.creditBalance) > 0
+                          ? `+${formatCurrency(row.advanceCredit || row.member?.creditBalance, tenant?.currency)}`
+                          : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-slate-300 bg-slate-100/70 font-bold text-slate-900 text-xs">
                   <td className="sticky left-0 z-20 bg-slate-100 px-4 py-3 shadow-[1px_0_0_0_#cbd5e1]">
-                    Totals
+                    Totals {periodSlice !== 'ALL' ? `(${periodSlice})` : ''}
                   </td>
-                  {data.periods.map((p) => (
+                  {activePeriods.map((p) => (
                     <td key={p.id} className="px-2.5 py-3 text-center font-mono text-[11px]">
                       {Math.round((data.totalsByPeriod[p.id]?.collected || 0) / 1000)}k
                     </td>
                   ))}
                   <td className="px-3 py-3 text-right font-mono">
-                    {formatCurrency(data.grandTotalCollected, tenant?.currency)}
+                    {formatCurrency(
+                      activePeriods.reduce((sum, p) => sum + (data.totalsByPeriod[p.id]?.collected || 0), 0),
+                      tenant?.currency
+                    )}
+                  </td>
+                  {(data.grandTotalPreviousArrears || 0) > 0 && (
+                    <td className="px-3 py-3 text-right font-mono text-amber-900">
+                      {formatCurrency(data.grandTotalPreviousArrears, tenant?.currency)}
+                    </td>
+                  )}
+                  <td className="px-3 py-3 text-right font-mono text-slate-900">
+                    {formatCurrency(
+                      activePeriods.reduce((sum, p) => sum + (data.totalsByPeriod[p.id]?.remaining || 0), 0),
+                      tenant?.currency
+                    )}
                   </td>
                   <td className="px-3 py-3 text-right font-mono text-rose-700">
-                    {formatCurrency(data.grandTotalRemaining, tenant?.currency)}
+                    {formatCurrency(
+                      activePeriods.reduce((sum, p) => sum + (data.totalsByPeriod[p.id]?.remaining || 0), 0) +
+                        (data.grandTotalPreviousArrears || 0),
+                      tenant?.currency
+                    )}
                   </td>
                   <td className="px-3 py-3 text-right font-mono text-emerald-700">
                     {formatCurrency(data.grandTotalAdvance ?? 0, tenant?.currency)}
@@ -541,7 +683,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                     <option value={PlanCycle.MONTHLY}>Monthly (12 periods)</option>
                     <option value={PlanCycle.WEEKLY}>Weekly (52 periods)</option>
                     <option value={PlanCycle.QUARTERLY}>Quarterly (4 periods)</option>
-                    <option value={PlanCycle.YEARLY}>Yearly (Annual)</option>
+                    <option value={PlanCycle.YEARLY}>Yearly (Annual Lump Sum)</option>
                   </select>
                 </div>
                 <div>
@@ -577,18 +719,55 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Destination Treasury Account (Optional)
                 </label>
-                <select
+                <SearchableSelect
+                  options={[
+                    { value: '', label: 'Default General Dues Account' },
+                    ...accounts.map((a) => ({
+                      value: a.id,
+                      label: a.name,
+                      sublabel: a.type.replace('_', ' '),
+                      badge: formatCurrency(a.balance, tenant?.currency),
+                    })),
+                  ]}
                   value={newPlanAccountId}
-                  onChange={(e) => setNewPlanAccountId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none"
-                >
-                  <option value="">Default General Dues Account</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({formatCurrency(a.balance, tenant?.currency)})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setNewPlanAccountId}
+                  placeholder="Select treasury account..."
+                />
+              </div>
+
+              {/* Predecessor Plan Succession & Arrears Carry-Over */}
+              <div className="pt-2 border-t border-slate-200">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasPredecessor}
+                    onChange={(e) => setHasPredecessor(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="text-xs font-bold text-slate-700">
+                    Carry over prior arrears from a predecessor program
+                  </span>
+                </label>
+                {hasPredecessor && (
+                  <div className="mt-2.5 space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-500">
+                      Select Predecessor Program:
+                    </label>
+                    <SearchableSelect
+                      options={plans.map((p) => ({
+                        value: p.id,
+                        label: p.title,
+                        sublabel: `${p.cycle} (${p.startDate ? new Date(p.startDate).getFullYear() : ''})`,
+                      }))}
+                      value={predecessorPlanId}
+                      onChange={setPredecessorPlanId}
+                      placeholder="Select previous contribution program..."
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Unpaid balances from this program will automatically roll over as Carried Arrears in the new program.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

@@ -15,6 +15,9 @@ export const getPlans = async (
     const plans = await prisma.contributionPlan.findMany({
       where: { tenantId },
       include: {
+        predecessorPlan: {
+          select: { id: true, title: true },
+        },
         periods: {
           orderBy: { orderIndex: 'asc' },
         },
@@ -33,6 +36,8 @@ export const getPlans = async (
         endDate: p.endDate?.toISOString(),
         isActive: p.isActive,
         targetAccountId: p.targetAccountId,
+        predecessorPlanId: p.predecessorPlanId,
+        predecessorPlanTitle: p.predecessorPlan?.title || null,
         periods: p.periods.map((per) => ({
           id: per.id,
           planId: per.planId,
@@ -72,6 +77,7 @@ export const createPlan = async (
           startDate,
           endDate,
           targetAccountId: input.targetAccountId,
+          predecessorPlanId: input.predecessorPlanId || undefined,
           isActive: true,
         },
       });
@@ -92,6 +98,41 @@ export const createPlan = async (
             dueDate: new Date(year, i, 28),
           });
         }
+      } else if (input.cycle === PlanCycle.WEEKLY) {
+        let currentWeekDate = new Date(year, 0, 7);
+        for (let w = 1; w <= 52; w++) {
+          const mName = monthNames[currentWeekDate.getMonth()];
+          const dayNum = currentWeekDate.getDate();
+          periodsData.push({
+            planId: plan.id,
+            label: `W${w < 10 ? '0' + w : w} (${mName} ${dayNum})`,
+            orderIndex: w,
+            dueDate: new Date(currentWeekDate),
+          });
+          currentWeekDate = new Date(currentWeekDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+        }
+      } else if (input.cycle === PlanCycle.QUARTERLY) {
+        const quarters = [
+          { label: `Q1 ${year} (Jan - Mar)`, due: new Date(year, 2, 31) },
+          { label: `Q2 ${year} (Apr - Jun)`, due: new Date(year, 5, 30) },
+          { label: `Q3 ${year} (Jul - Sep)`, due: new Date(year, 8, 30) },
+          { label: `Q4 ${year} (Oct - Dec)`, due: new Date(year, 11, 31) },
+        ];
+        quarters.forEach((q, idx) => {
+          periodsData.push({
+            planId: plan.id,
+            label: q.label,
+            orderIndex: idx + 1,
+            dueDate: q.due,
+          });
+        });
+      } else if (input.cycle === PlanCycle.YEARLY) {
+        periodsData.push({
+          planId: plan.id,
+          label: `Annual ${year}`,
+          orderIndex: 1,
+          dueDate: new Date(year, 11, 31),
+        });
       }
 
       await tx.contributionPeriod.createMany({
@@ -200,6 +241,9 @@ export const getMatrix = async (
       targetPlan = await prisma.contributionPlan.findFirst({
         where: { id: planId, tenantId },
         include: {
+          predecessorPlan: {
+            select: { id: true, title: true },
+          },
           periods: { orderBy: { orderIndex: 'asc' } },
         },
       });
@@ -208,6 +252,9 @@ export const getMatrix = async (
       targetPlan = await prisma.contributionPlan.findFirst({
         where: { tenantId, isActive: true },
         include: {
+          predecessorPlan: {
+            select: { id: true, title: true },
+          },
           periods: { orderBy: { orderIndex: 'asc' } },
         },
         orderBy: { startDate: 'desc' },
@@ -217,6 +264,96 @@ export const getMatrix = async (
     if (!targetPlan) {
       res.status(404).json({ message: 'No contribution plan found' });
       return;
+    }
+
+    // Auto-heal if plan has 0 periods (e.g. created previously under unsupported cycle)
+    if (targetPlan.periods.length === 0) {
+      const year = targetPlan.startDate.getFullYear();
+      const periodsData = [];
+      const monthNames = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ];
+
+      if (targetPlan.cycle === PlanCycle.MONTHLY) {
+        for (let i = 0; i < 12; i++) {
+          periodsData.push({
+            planId: targetPlan.id,
+            label: `${monthNames[i]} ${year}`,
+            orderIndex: i + 1,
+            dueDate: new Date(year, i, 28),
+          });
+        }
+      } else if (targetPlan.cycle === PlanCycle.WEEKLY) {
+        let currentWeekDate = new Date(year, 0, 7);
+        for (let w = 1; w <= 52; w++) {
+          const mName = monthNames[currentWeekDate.getMonth()];
+          const dayNum = currentWeekDate.getDate();
+          periodsData.push({
+            planId: targetPlan.id,
+            label: `W${w < 10 ? '0' + w : w} (${mName} ${dayNum})`,
+            orderIndex: w,
+            dueDate: new Date(currentWeekDate),
+          });
+          currentWeekDate = new Date(currentWeekDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+        }
+      } else if (targetPlan.cycle === PlanCycle.QUARTERLY) {
+        const quarters = [
+          { label: `Q1 ${year} (Jan - Mar)`, due: new Date(year, 2, 31) },
+          { label: `Q2 ${year} (Apr - Jun)`, due: new Date(year, 5, 30) },
+          { label: `Q3 ${year} (Jul - Sep)`, due: new Date(year, 8, 30) },
+          { label: `Q4 ${year} (Oct - Dec)`, due: new Date(year, 11, 31) },
+        ];
+        quarters.forEach((q, idx) => {
+          periodsData.push({
+            planId: targetPlan.id,
+            label: q.label,
+            orderIndex: idx + 1,
+            dueDate: q.due,
+          });
+        });
+      } else if (targetPlan.cycle === PlanCycle.YEARLY) {
+        periodsData.push({
+          planId: targetPlan.id,
+          label: `Annual ${year}`,
+          orderIndex: 1,
+          dueDate: new Date(year, 11, 31),
+        });
+      }
+
+      if (periodsData.length > 0) {
+        await prisma.contributionPeriod.createMany({ data: periodsData });
+        const newPeriods = await prisma.contributionPeriod.findMany({
+          where: { planId: targetPlan.id },
+          orderBy: { orderIndex: 'asc' },
+        });
+
+        const activeMembers = await prisma.member.findMany({
+          where: { tenantId, status: 'ACTIVE' },
+        });
+
+        const assessmentsData = [];
+        for (const period of newPeriods) {
+          for (const member of activeMembers) {
+            const memberJoined = member.joinedDate || new Date();
+            const isBeforeJoin = period.dueDate < memberJoined;
+            assessmentsData.push({
+              periodId: period.id,
+              memberId: member.id,
+              expectedAmount: isBeforeJoin ? 0 : Number(targetPlan.defaultAmount),
+              paidAmount: 0,
+              status: isBeforeJoin ? AssessmentStatus.PAID : AssessmentStatus.UNPAID,
+              surplusAmount: 0,
+            });
+          }
+        }
+
+        if (assessmentsData.length > 0) {
+          await prisma.contributionAssessment.createMany({ data: assessmentsData });
+        }
+
+        targetPlan.periods = newPeriods;
+      }
     }
 
     const periods = targetPlan.periods;
@@ -232,6 +369,31 @@ export const getMatrix = async (
       },
       orderBy: [{ fullName: 'asc' }],
     });
+
+    // Check predecessor plan arrears if predecessorPlanId is set
+    const previousArrearsByMember: Record<string, number> = {};
+    if (targetPlan.predecessorPlanId) {
+      const predecessorAssessments = await prisma.contributionAssessment.findMany({
+        where: {
+          period: { planId: targetPlan.predecessorPlanId },
+          member: { tenantId },
+        },
+        select: {
+          memberId: true,
+          expectedAmount: true,
+          paidAmount: true,
+        },
+      });
+
+      for (const pa of predecessorAssessments) {
+        const exp = Number(pa.expectedAmount);
+        const paid = Number(pa.paidAmount);
+        if (exp > paid) {
+          previousArrearsByMember[pa.memberId] =
+            (previousArrearsByMember[pa.memberId] || 0) + (exp - paid);
+        }
+      }
+    }
 
     // Initialize period totals
     const totalsByPeriod: Record<
@@ -260,6 +422,7 @@ export const getMatrix = async (
     let grandTotalSurplus = 0;
     let grandTotalAdvance = 0;
     let grandTotalRemaining = 0;
+    let grandTotalPreviousArrears = 0;
 
     const rows = members.map((member) => {
       const cells: Record<string, any> = {};
@@ -304,11 +467,15 @@ export const getMatrix = async (
       grandTotalCollected += totalPaid;
       grandTotalRemaining += totalRemaining;
 
+      const previousArrears = previousArrearsByMember[member.id] || 0;
+      grandTotalPreviousArrears += previousArrears;
+      const totalDueWithArrears = totalRemaining + previousArrears;
+
       const advanceCredit = Number(member.creditBalance);
       grandTotalAdvance += advanceCredit;
 
       let overallStatus: AssessmentStatus = AssessmentStatus.UNPAID;
-      if (totalRemaining === 0) {
+      if (totalDueWithArrears === 0) {
         overallStatus = AssessmentStatus.PAID;
       } else if (totalPaid > 0) {
         overallStatus = AssessmentStatus.PARTIAL;
@@ -333,6 +500,8 @@ export const getMatrix = async (
         totalSurplus: 0,
         advanceCredit,
         totalRemaining,
+        previousArrears,
+        totalDueWithArrears,
         overallStatus,
       };
     });
@@ -358,6 +527,8 @@ export const getMatrix = async (
         endDate: targetPlan.endDate?.toISOString(),
         isActive: targetPlan.isActive,
         targetAccountId: targetPlan.targetAccountId,
+        predecessorPlanId: targetPlan.predecessorPlanId,
+        predecessorPlanTitle: (targetPlan as any).predecessorPlan?.title || null,
       },
       periods: periods.map((p) => ({
         id: p.id,
@@ -374,6 +545,8 @@ export const getMatrix = async (
       grandTotalSurplus: 0,
       grandTotalAdvance,
       grandTotalRemaining,
+      grandTotalPreviousArrears,
+      predecessorPlanTitle: (targetPlan as any).predecessorPlan?.title || null,
       overallCollectionRate,
     });
   } catch (error) {

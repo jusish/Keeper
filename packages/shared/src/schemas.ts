@@ -55,6 +55,7 @@ export const contributionPlanSchema = z.object({
   defaultAmount: z.number().positive('Default contribution amount must be greater than 0'),
   year: z.number().int().min(2020).max(2050),
   targetAccountId: z.string().uuid().optional(),
+  predecessorPlanId: z.string().uuid().optional(),
 });
 
 export const recordPaymentSchema = z.object({

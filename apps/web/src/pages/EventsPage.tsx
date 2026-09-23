@@ -1,22 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import { StatCard } from '../components/common/StatCard';
+import { SearchableSelect, SearchableOption } from '../components/common/SearchableSelect';
 import {
   CalendarCheck,
   Plus,
-  Users,
-  CheckCircle,
-  AlertCircle,
   Download,
   MessageSquare,
   Edit2,
   TrendingUp,
   Receipt,
-  Shirt,
-  MapPin,
   Calendar,
   Wallet,
   Trash2,
@@ -24,7 +20,6 @@ import {
 } from 'lucide-react';
 import {
   TargetAudience,
-  AssessmentStatus,
 } from '@keeper/shared';
 import { pdf } from '@react-pdf/renderer';
 import { EventSettlementPDF } from '../reports/EventSettlementPDF';
@@ -70,6 +65,20 @@ export const EventsPage: React.FC<EventsPageProps> = ({
   useEffect(() => {
     loadEvents();
   }, []);
+
+  const eventOptions: SearchableOption[] = useMemo(
+    () =>
+      events.map((ev) => ({
+        value: ev.id,
+        label: ev.title,
+        sublabel: `${formatDate(ev.eventDate)} • ${ev.location || 'No location'}`,
+        badge:
+          ev.totalAssessed > 0
+            ? `${Math.round((ev.totalCollected / ev.totalAssessed) * 100)}% collected`
+            : '0% collected',
+      })),
+    [events]
+  );
 
   const loadEvents = async () => {
     setIsLoading(true);
@@ -171,7 +180,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       {/* Page Title & Event Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900">Events & Projects</h1>
+          <h1 className="text-xl font-extrabold text-slate-900">Events &amp; Projects</h1>
           <p className="text-xs text-slate-500">
             Multi-tiered community project assessments, member contributions, and financial settlements.
           </p>
@@ -190,25 +199,25 @@ export const EventsPage: React.FC<EventsPageProps> = ({
         </div>
       </div>
 
-      {/* Event Selector Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {events.map((ev) => {
-          const isSelected = ev.id === selectedEventId;
-          return (
-            <StatCard
-              key={ev.id}
-              title={ev.title}
-              value={formatCurrency(ev.totalCollected, tenant?.currency)}
-              subtitle={`${formatDate(ev.eventDate)} • ${ev.location || 'Kigali'}`}
-              icon={Calendar}
-              color={isSelected ? 'emerald' : 'slate'}
-              progress={ev.collectionRate}
-              onClick={() => handleSelectEvent(ev.id)}
-              className={isSelected ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md' : 'hover:border-slate-300'}
+      {/* Event Switcher — Searchable Select */}
+      {events.length > 0 && (
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <Calendar className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span className="text-xs font-bold text-slate-700 whitespace-nowrap">Active Event / Project</span>
+          <div className="flex-1">
+            <SearchableSelect
+              options={eventOptions}
+              value={selectedEventId || ''}
+              onChange={(id) => { if (id) handleSelectEvent(id); }}
+              placeholder="Search and select an event or project..."
+              searchPlaceholder="Search by name, date, or location..."
             />
-          );
-        })}
-      </div>
+          </div>
+          <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0">
+            {events.length} event{events.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
 
       {/* SELECTED EVENT SETTLEMENT REPORT */}
       {settlement && (

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { StatCard } from '../components/common/StatCard';
+import { SearchableSelect, SearchableOption } from '../components/common/SearchableSelect';
 import {
   Wallet,
   Plus,
@@ -11,9 +12,6 @@ import {
   Landmark,
   Smartphone,
   Banknote,
-  FolderLock,
-  Calendar,
-  Search,
   Layers,
   Download,
 } from 'lucide-react';
@@ -82,6 +80,19 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
     loadLedger(id);
   };
 
+  const accountOptions: SearchableOption[] = useMemo(
+    () =>
+      accounts.map((acc) => ({
+        value: acc.id,
+        label: acc.name,
+        sublabel: `${acc.accountNumber ? `${acc.accountNumber} • ` : ''}${acc.type.replace(/_/g, ' ')}${acc.isDefault ? ' • Default' : ''}`,
+        badge: formatCurrency(acc.balance, tenant?.currency),
+      })),
+    [accounts, tenant?.currency]
+  );
+
+
+
   const handleExportPdf = async () => {
     if (!ledgerData) return;
     setIsExportingPdf(true);
@@ -127,18 +138,8 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
     }
   };
 
-  const getAccountIcon = (type: AccountType) => {
-    switch (type) {
-      case AccountType.BANK_ACCOUNT:
-        return <Landmark className="h-5 w-5 text-blue-600" />;
-      case AccountType.MOBILE_MONEY:
-        return <Smartphone className="h-5 w-5 text-amber-600" />;
-      case AccountType.PETTY_CASH:
-        return <Banknote className="h-5 w-5 text-emerald-600" />;
-      default:
-        return <Wallet className="h-5 w-5 text-emerald-700" />;
-    }
-  };
+
+
 
   const totalFunds = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
   const defaultAccount = accounts.find((a) => a.isDefault);
@@ -216,47 +217,25 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
         />
       </div>
 
-      <div>
-        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-          Individual Accounts Roster
-        </h2>
-        {/* Account Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {accounts.map((acc) => {
-          const isSelected = acc.id === selectedAccountId;
-          const icon =
-            acc.type === AccountType.BANK_ACCOUNT
-              ? Landmark
-              : acc.type === AccountType.MOBILE_MONEY
-              ? Smartphone
-              : acc.type === AccountType.PETTY_CASH
-              ? Banknote
-              : Wallet;
-
-          const color =
-            acc.type === AccountType.BANK_ACCOUNT
-              ? 'blue'
-              : acc.type === AccountType.MOBILE_MONEY
-              ? 'amber'
-              : acc.type === AccountType.PETTY_CASH
-              ? 'purple'
-              : 'emerald';
-
-          return (
-            <StatCard
-              key={acc.id}
-              title={acc.name}
-              value={formatCurrency(acc.balance, tenant?.currency)}
-              subtitle={`${acc.accountNumber ? `${acc.accountNumber} • ` : ''}${acc.type.replace('_', ' ')}${acc.isDefault ? ' (Default)' : ''}`}
-              icon={icon}
-              color={color}
-              onClick={() => handleSelectAccount(acc.id)}
-              className={isSelected ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md' : 'hover:border-slate-300'}
+      {/* Account Switcher — Searchable Select */}
+      {accounts.length > 0 && (
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <Wallet className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span className="text-xs font-bold text-slate-700 whitespace-nowrap">View Account Ledger</span>
+          <div className="flex-1">
+            <SearchableSelect
+              options={accountOptions}
+              value={selectedAccountId || ''}
+              onChange={(id) => { if (id) handleSelectAccount(id); }}
+              placeholder="Search and select an account to view its ledger..."
+              searchPlaceholder="Search by name, type, or account number..."
             />
-          );
-        })}
-      </div>
-      </div>
+          </div>
+          <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0">
+            {accounts.length} account{accounts.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
 
       {/* DETAILED ACCOUNT LEDGER */}
       {ledgerData && (

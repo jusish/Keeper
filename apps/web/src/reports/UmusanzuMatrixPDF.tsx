@@ -127,13 +127,20 @@ interface UmusanzuMatrixPDFProps {
   data: ContributionMatrixResponse;
   tenantName: string;
   currency: string;
+  filteredPeriods?: any[];
+  periodLabel?: string;
 }
 
 export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
   data,
   tenantName,
   currency,
+  filteredPeriods,
+  periodLabel,
 }) => {
+  const periodsToRender = filteredPeriods && filteredPeriods.length > 0 ? filteredPeriods : data.periods;
+  const hasPriorArrears = (data.grandTotalPreviousArrears || 0) > 0;
+
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={styles.page}>
@@ -141,9 +148,10 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
         <View style={styles.header}>
           <View style={styles.titleRow}>
             <View>
-              <Text style={styles.title}>{tenantName} — Umusanzu Annual Ledger</Text>
+              <Text style={styles.title}>{tenantName} — Umusanzu Contributions Ledger</Text>
               <Text style={styles.subtitle}>
-                Plan: {data.plan.title} • Standard Contribution: {Number(data.plan.defaultAmount).toLocaleString()} {currency}
+                Plan: {data.plan.title} {periodLabel ? `• Report Range: ${periodLabel}` : ''} • Standard: {Number(data.plan.defaultAmount).toLocaleString()} {currency}
+                {data.predecessorPlanTitle ? ` • Carried from: ${data.predecessorPlanTitle}` : ''}
               </Text>
             </View>
             <View>
@@ -160,71 +168,96 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
           {/* Header Row */}
           <View style={styles.tableHeader}>
             <Text style={styles.colMember}>Member Name</Text>
-            {data.periods.map((p) => (
+            {periodsToRender.map((p) => (
               <Text key={p.id} style={styles.colMonth}>
                 {p.label.split(' ')[0]}
               </Text>
             ))}
             <Text style={styles.colSummary}>Total Paid</Text>
-            <Text style={styles.colSummary}>Advance Credit (+)</Text>
-            <Text style={styles.colSummary}>Balance</Text>
+            {hasPriorArrears && <Text style={styles.colSummary}>Prior Arrears</Text>}
+            <Text style={styles.colSummary}>Advance (+)</Text>
+            <Text style={styles.colSummary}>Balance Due</Text>
           </View>
 
           {/* Rows */}
-          {data.rows.map((row, idx) => (
-            <View
-              key={row.member.id}
-              style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : {}]}
-            >
-              <Text style={styles.colMember}>
-                {row.member.fullName} {row.member.membershipCode ? `(${row.member.membershipCode})` : ''}
-              </Text>
+          {data.rows.map((row, idx) => {
+            const rowPaidInSlice = periodsToRender.reduce(
+              (sum, p) => sum + (row.cells[p.id]?.paidAmount || 0),
+              0
+            );
+            const rowRemainingInSlice = periodsToRender.reduce(
+              (sum, p) => sum + (row.cells[p.id]?.remainingAmount || 0),
+              0
+            );
+            const totalDue = rowRemainingInSlice + (row.previousArrears || 0);
 
-              {data.periods.map((p) => {
-                const cell = row.cells[p.id];
-                if (cell?.isExempt) {
-                  return <Text key={p.id} style={[styles.colMonth, styles.unpaidChip]}>N/A</Text>;
-                }
-                if (!cell || cell.paidAmount === 0) {
-                  return <Text key={p.id} style={[styles.colMonth, styles.unpaidChip]}>-</Text>;
-                }
-                if (cell.status === AssessmentStatus.PAID) {
+            return (
+              <View
+                key={row.member.id}
+                style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : {}]}
+              >
+                <Text style={styles.colMember}>
+                  {row.member.fullName} {row.member.membershipCode ? `(${row.member.membershipCode})` : ''}
+                </Text>
+
+                {periodsToRender.map((p) => {
+                  const cell = row.cells[p.id];
+                  if (cell?.isExempt) {
+                    return <Text key={p.id} style={[styles.colMonth, styles.unpaidChip]}>N/A</Text>;
+                  }
+                  if (!cell || cell.paidAmount === 0) {
+                    return <Text key={p.id} style={[styles.colMonth, styles.unpaidChip]}>-</Text>;
+                  }
+                  if (cell.status === AssessmentStatus.PAID) {
+                    return (
+                      <Text key={p.id} style={[styles.colMonth, styles.paidChip]}>
+                        {cell.paidAmount.toLocaleString()}
+                      </Text>
+                    );
+                  }
                   return (
-                    <Text key={p.id} style={[styles.colMonth, styles.paidChip]}>
+                    <Text key={p.id} style={[styles.colMonth, styles.partialChip]}>
                       {cell.paidAmount.toLocaleString()}
                     </Text>
                   );
-                }
-                return (
-                  <Text key={p.id} style={[styles.colMonth, styles.partialChip]}>
-                    {cell.paidAmount.toLocaleString()}
-                  </Text>
-                );
-              })}
+                })}
 
-              <Text style={styles.colSummary}>{row.totalPaid.toLocaleString()}</Text>
-              <Text style={styles.colSummary}>
-                {(row.advanceCredit || row.member.creditBalance || 0) > 0
-                  ? `+${(row.advanceCredit || row.member.creditBalance).toLocaleString()}`
-                  : '-'}
-              </Text>
-              <Text style={styles.colSummary}>
-                {row.totalRemaining > 0 ? row.totalRemaining.toLocaleString() : '0'}
-              </Text>
-            </View>
-          ))}
+                <Text style={styles.colSummary}>{rowPaidInSlice.toLocaleString()}</Text>
+                {hasPriorArrears && (
+                  <Text style={styles.colSummary}>
+                    {row.previousArrears > 0 ? row.previousArrears.toLocaleString() : '-'}
+                  </Text>
+                )}
+                <Text style={styles.colSummary}>
+                  {(row.advanceCredit || row.member.creditBalance || 0) > 0
+                    ? `+${(row.advanceCredit || row.member.creditBalance).toLocaleString()}`
+                    : '-'}
+                </Text>
+                <Text style={styles.colSummary}>
+                  {totalDue > 0 ? totalDue.toLocaleString() : '0'}
+                </Text>
+              </View>
+            );
+          })}
 
           {/* Footer Totals */}
           <View style={styles.footerRow}>
             <Text style={styles.colMember}>Grand Totals ({data.rows.length} members)</Text>
-            {data.periods.map((p) => (
+            {periodsToRender.map((p) => (
               <Text key={p.id} style={styles.colMonth}>
                 {data.totalsByPeriod[p.id]?.collected?.toLocaleString() || '0'}
               </Text>
             ))}
             <Text style={styles.colSummary}>{data.grandTotalCollected.toLocaleString()}</Text>
+            {hasPriorArrears && (
+              <Text style={styles.colSummary}>
+                {data.grandTotalPreviousArrears.toLocaleString()}
+              </Text>
+            )}
             <Text style={styles.colSummary}>+{(data.grandTotalAdvance || 0).toLocaleString()}</Text>
-            <Text style={styles.colSummary}>{data.grandTotalRemaining.toLocaleString()}</Text>
+            <Text style={styles.colSummary}>
+              {(data.grandTotalRemaining + (data.grandTotalPreviousArrears || 0)).toLocaleString()}
+            </Text>
           </View>
         </View>
 
