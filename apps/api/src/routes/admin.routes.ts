@@ -14,10 +14,20 @@ const router = Router();
 router.use(authenticate);
 router.use(requireRole(Role.SUPER_ADMIN));
 
+// Overview & Metrics aliases
 router.get('/metrics', getPlatformMetrics);
+router.get('/overview', getPlatformMetrics);
+router.get('/communities', getPlatformMetrics);
+
+// Users
 router.get('/users', getAllUsers);
-router.get('/audit-logs', getGlobalAuditLogs);
-router.post('/communities', createCommunity);
 router.patch('/users/:id/status', toggleUserStatus);
+
+// Audit Trail aliases
+router.get('/audit', getGlobalAuditLogs);
+router.get('/audit-logs', getGlobalAuditLogs);
+
+// Community Management
+router.post('/communities', createCommunity);
 
 export default router;

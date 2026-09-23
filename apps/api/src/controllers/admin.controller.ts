@@ -176,7 +176,8 @@ export const createCommunity = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { name, slug, currency = 'RWF', adminName, adminEmail, adminPassword } = req.body;
+    const { name, slug, currency = 'RWF', adminName, adminFullName, adminEmail, adminPassword } = req.body;
+    const effectiveAdminName = adminFullName || adminName;
 
     if (!name || typeof name !== 'string') {
       res.status(400).json({ message: 'Community name is required' });
@@ -213,14 +214,14 @@ export const createCommunity = async (
       });
 
       // Optional initial community admin
-      if (adminEmail && adminPassword && adminName) {
+      if (adminEmail && adminPassword && effectiveAdminName) {
         const hashedPassword = await (await import('bcryptjs')).default.hash(adminPassword, 10);
         await tx.user.create({
           data: {
             tenantId: created.id,
             email: adminEmail.toLowerCase(),
             passwordHash: hashedPassword,
-            fullName: adminName,
+            fullName: effectiveAdminName,
             role: Role.ADMIN,
           },
         });

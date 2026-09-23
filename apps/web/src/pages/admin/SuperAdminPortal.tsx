@@ -111,7 +111,13 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({
       const res = await api.get('/admin/overview');
       setMetrics(res.data);
     } catch (err) {
-      console.error('Failed to fetch platform metrics', err);
+      console.warn('Retrying /admin/metrics...', err);
+      try {
+        const fallback = await api.get('/admin/metrics');
+        setMetrics(fallback.data);
+      } catch (e) {
+        console.error('Failed to fetch platform metrics', e);
+      }
     }
   };
 
@@ -135,12 +141,28 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({
       if (selectedTenantFilter !== 'ALL') params.tenantId = selectedTenantFilter;
       if (searchQuery.trim()) params.search = searchQuery.trim();
 
-      const res = await api.get('/admin/audit', { params });
+      const res = await api.get('/admin/audit-logs', { params });
       setAuditLogs(res.data);
     } catch (err) {
-      console.error('Failed to fetch universal audit logs', err);
+      console.warn('Retrying /admin/audit...', err);
+      try {
+        const params: any = {};
+        if (selectedTenantFilter !== 'ALL') params.tenantId = selectedTenantFilter;
+        if (searchQuery.trim()) params.search = searchQuery.trim();
+
+        const fallback = await api.get('/admin/audit', { params });
+        setAuditLogs(fallback.data);
+      } catch (e) {
+        console.error('Failed to fetch universal audit logs', e);
+      }
     }
   };
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     const loadAll = async () => {
