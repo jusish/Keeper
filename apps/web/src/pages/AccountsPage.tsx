@@ -193,37 +193,35 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {accounts.map((acc) => {
           const isSelected = acc.id === selectedAccountId;
+          const icon =
+            acc.type === AccountType.BANK_ACCOUNT
+              ? Landmark
+              : acc.type === AccountType.MOBILE_MONEY
+              ? Smartphone
+              : acc.type === AccountType.PETTY_CASH
+              ? Banknote
+              : Wallet;
+
+          const color =
+            acc.type === AccountType.BANK_ACCOUNT
+              ? 'blue'
+              : acc.type === AccountType.MOBILE_MONEY
+              ? 'amber'
+              : acc.type === AccountType.PETTY_CASH
+              ? 'purple'
+              : 'emerald';
+
           return (
-            <div
+            <StatCard
               key={acc.id}
+              title={acc.name}
+              value={formatCurrency(acc.balance, tenant?.currency)}
+              subtitle={`${acc.accountNumber ? `${acc.accountNumber} • ` : ''}${acc.type.replace('_', ' ')}${acc.isDefault ? ' (Default)' : ''}`}
+              icon={icon}
+              color={color}
               onClick={() => handleSelectAccount(acc.id)}
-              className={`cursor-pointer rounded-2xl border p-4.5 transition ${
-                isSelected
-                  ? 'border-emerald-500 bg-white shadow-md ring-2 ring-emerald-500/20'
-                  : 'border-slate-200 bg-white/70 hover:bg-white hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="rounded-xl bg-slate-100 p-2">
-                  {getAccountIcon(acc.type)}
-                </div>
-                {acc.isDefault && (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-extrabold text-emerald-800 uppercase">
-                    Default
-                  </span>
-                )}
-              </div>
-              <h3 className="mt-3 text-sm font-bold text-slate-900 truncate">
-                {acc.name}
-              </h3>
-              <p className="mt-1 text-lg font-black text-slate-900 font-mono">
-                {formatCurrency(acc.balance, tenant?.currency)}
-              </p>
-              <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
-                <span className="font-mono">{acc.accountNumber || 'Primary'}</span>
-                <span>{acc.type.replace('_', ' ')}</span>
-              </div>
-            </div>
+              className={isSelected ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md' : 'hover:border-slate-300'}
+            />
           );
         })}
       </div>

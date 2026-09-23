@@ -19,6 +19,7 @@ import {
   Save,
   Check,
   Search,
+  Lock,
 } from 'lucide-react';
 import {
   AttendanceStatus,
@@ -47,6 +48,8 @@ export const AttendancePage: React.FC = () => {
   const [newStartTime, setNewStartTime] = useState('18:00');
   const [newEndTime, setNewEndTime] = useState('20:30');
   const [newIsRecurring, setNewIsRecurring] = useState(true);
+  const [recurrenceFreq, setRecurrenceFreq] = useState<'WEEKLY' | 'BIWEEKLY' | 'MONTHLY'>('WEEKLY');
+  const [recurrenceCount, setRecurrenceCount] = useState<number>(4);
   const [newRule, setNewRule] = useState('WEEKLY_TUESDAY');
 
   useEffect(() => {
@@ -182,7 +185,7 @@ export const AttendancePage: React.FC = () => {
         startTime: newStartTime,
         endTime: newEndTime,
         isRecurring: newIsRecurring,
-        recurrenceRule: newIsRecurring ? newRule : undefined,
+        recurrenceRule: newIsRecurring ? `${recurrenceFreq}:${recurrenceCount}` : undefined,
       });
 
       setShowCreateModal(false);
@@ -303,7 +306,12 @@ export const AttendancePage: React.FC = () => {
                 <span>WhatsApp Summary</span>
               </button>
 
-              {sessionDetail.status !== SessionStatus.CANCELLED && user?.role !== 'VIEWER' && (
+              {sessionDetail.status === SessionStatus.COMPLETED ? (
+                <div className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-800">
+                  <Lock className="h-4 w-4 text-emerald-600" />
+                  <span>Finalized & Sealed</span>
+                </div>
+              ) : sessionDetail.status !== SessionStatus.CANCELLED && user?.role !== 'VIEWER' ? (
                 <>
                   <button
                     onClick={() => setShowCancelModal(true)}
@@ -330,7 +338,7 @@ export const AttendancePage: React.FC = () => {
                     <span>{isSaving ? 'Saving...' : 'Finalize Attendance'}</span>
                   </button>
                 </>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -393,6 +401,28 @@ export const AttendancePage: React.FC = () => {
             </div>
           )}
 
+          {/* Sealed Attendance Banner (If completed) */}
+          {sessionDetail.status === SessionStatus.COMPLETED && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-xl">
+                  <Lock className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-900">
+                    Attendance Finalized & Sealed
+                  </h4>
+                  <p className="text-xs text-emerald-800">
+                    This session record is permanently locked in the audit ledger and cannot be edited.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono font-bold bg-white text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full shadow-2xs">
+                IMMUTABLE RECORD
+              </span>
+            </div>
+          )}
+
           {/* Attendance Roster Checklist Table */}
           {sessionDetail.status !== SessionStatus.CANCELLED && (
             <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -412,6 +442,8 @@ export const AttendancePage: React.FC = () => {
                       reasonNote: '',
                     };
 
+                    const isLocked = sessionDetail.status === SessionStatus.COMPLETED;
+
                     return (
                       <tr key={r.id} className="hover:bg-slate-50/70 transition">
                         <td className="px-4 py-3 font-bold text-slate-900">
@@ -421,70 +453,95 @@ export const AttendancePage: React.FC = () => {
                           Member
                         </td>
                         <td className="px-3 py-3">
-                          {/* 4 Status Toggle Buttons */}
-                          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[11px]">
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(r.memberId, AttendanceStatus.PRESENT)}
-                              className={`rounded-md px-2.5 py-1 font-bold transition ${
+                          {isLocked ? (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold ${
                                 draft.status === AttendanceStatus.PRESENT
-                                  ? 'bg-emerald-600 text-white shadow-2xs'
-                                  : 'text-slate-600 hover:text-slate-900'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : draft.status === AttendanceStatus.ABSENT_EXCUSED
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : draft.status === AttendanceStatus.LATE
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-rose-100 text-rose-800'
                               }`}
                             >
-                              Present
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(r.memberId, AttendanceStatus.ABSENT_EXCUSED)}
-                              className={`rounded-md px-2.5 py-1 font-bold transition ${
-                                draft.status === AttendanceStatus.ABSENT_EXCUSED
-                                  ? 'bg-amber-500 text-white shadow-2xs'
-                                  : 'text-slate-600 hover:text-slate-900'
-                              }`}
-                            >
-                              Excused
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(r.memberId, AttendanceStatus.LATE)}
-                              className={`rounded-md px-2.5 py-1 font-bold transition ${
-                                draft.status === AttendanceStatus.LATE
-                                  ? 'bg-blue-600 text-white shadow-2xs'
-                                  : 'text-slate-600 hover:text-slate-900'
-                              }`}
-                            >
-                              Late
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(r.memberId, AttendanceStatus.ABSENT_UNEXCUSED)}
-                              className={`rounded-md px-2.5 py-1 font-bold transition ${
-                                draft.status === AttendanceStatus.ABSENT_UNEXCUSED
-                                  ? 'bg-rose-600 text-white shadow-2xs'
-                                  : 'text-slate-600 hover:text-slate-900'
-                              }`}
-                            >
-                              Absent
-                            </button>
-                          </div>
+                              {draft.status === AttendanceStatus.PRESENT && '✓ Present'}
+                              {draft.status === AttendanceStatus.ABSENT_EXCUSED && '⏳ Excused'}
+                              {draft.status === AttendanceStatus.LATE && '🕒 Late'}
+                              {draft.status === AttendanceStatus.ABSENT_UNEXCUSED && '✗ Absent'}
+                            </span>
+                          ) : (
+                            /* 4 Status Toggle Buttons */
+                            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[11px]">
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(r.memberId, AttendanceStatus.PRESENT)}
+                                className={`rounded-md px-2.5 py-1 font-bold transition ${
+                                  draft.status === AttendanceStatus.PRESENT
+                                    ? 'bg-emerald-600 text-white shadow-2xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                              >
+                                Present
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(r.memberId, AttendanceStatus.ABSENT_EXCUSED)}
+                                className={`rounded-md px-2.5 py-1 font-bold transition ${
+                                  draft.status === AttendanceStatus.ABSENT_EXCUSED
+                                    ? 'bg-amber-500 text-white shadow-2xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                              >
+                                Excused
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(r.memberId, AttendanceStatus.LATE)}
+                                className={`rounded-md px-2.5 py-1 font-bold transition ${
+                                  draft.status === AttendanceStatus.LATE
+                                    ? 'bg-blue-600 text-white shadow-2xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                              >
+                                Late
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(r.memberId, AttendanceStatus.ABSENT_UNEXCUSED)}
+                                className={`rounded-md px-2.5 py-1 font-bold transition ${
+                                  draft.status === AttendanceStatus.ABSENT_UNEXCUSED
+                                    ? 'bg-rose-600 text-white shadow-2xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                              >
+                                Absent
+                              </button>
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
-                          <input
-                            type="text"
-                            placeholder={
-                              draft.status === AttendanceStatus.ABSENT_EXCUSED
-                                ? 'Specify approved reason (e.g. Work shift, Illness)...'
-                                : 'Optional note...'
-                            }
-                            value={draft.reasonNote}
-                            onChange={(e) => handleReasonChange(r.memberId, e.target.value)}
-                            className={`w-full rounded-lg border px-3 py-1 text-xs focus:outline-none ${
-                              draft.status === AttendanceStatus.ABSENT_EXCUSED && !draft.reasonNote
-                                ? 'border-amber-300 bg-amber-50/50'
-                                : 'border-slate-200 bg-white'
-                            }`}
-                          />
+                          {isLocked ? (
+                            <span className="text-xs text-slate-600 font-medium">
+                              {draft.reasonNote || '—'}
+                            </span>
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder={
+                                draft.status === AttendanceStatus.ABSENT_EXCUSED
+                                  ? 'Specify approved reason (e.g. Work shift, Illness)...'
+                                  : 'Optional note...'
+                              }
+                              value={draft.reasonNote}
+                              onChange={(e) => handleReasonChange(r.memberId, e.target.value)}
+                              className={`w-full rounded-lg border px-3 py-1 text-xs focus:outline-none ${
+                                draft.status === AttendanceStatus.ABSENT_EXCUSED && !draft.reasonNote
+                                  ? 'border-amber-300 bg-amber-50/50'
+                                  : 'border-slate-200 bg-white'
+                              }`}
+                            />
+                          )}
                         </td>
                       </tr>
                     );
@@ -598,17 +655,47 @@ export const AttendancePage: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="rec"
-                  checked={newIsRecurring}
-                  onChange={(e) => setNewIsRecurring(e.target.checked)}
-                  className="h-4 w-4 rounded text-emerald-600"
-                />
-                <label htmlFor="rec" className="text-xs text-slate-700 cursor-pointer">
-                  Repeating session (e.g. Weekly)
-                </label>
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="rec"
+                    checked={newIsRecurring}
+                    onChange={(e) => setNewIsRecurring(e.target.checked)}
+                    className="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="rec" className="text-xs text-slate-700 font-semibold cursor-pointer">
+                    Repeating session series (Automatic schedule generator)
+                  </label>
+                </div>
+
+                {newIsRecurring && (
+                  <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700">Frequency</label>
+                      <select
+                        value={recurrenceFreq}
+                        onChange={(e) => setRecurrenceFreq(e.target.value as any)}
+                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-xs"
+                      >
+                        <option value="WEEKLY">Weekly (Every 7 days)</option>
+                        <option value="BIWEEKLY">Bi-Weekly (Every 14 days)</option>
+                        <option value="MONTHLY">Monthly (Every 30 days)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700">Occurrences Count</label>
+                      <input
+                        type="number"
+                        min="2"
+                        max="24"
+                        value={recurrenceCount}
+                        onChange={(e) => setRecurrenceCount(Number(e.target.value))}
+                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="mt-4 flex justify-end gap-2 pt-2">
                 <button

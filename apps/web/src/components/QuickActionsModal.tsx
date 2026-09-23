@@ -18,6 +18,7 @@ import {
   ExpenseCategory,
   AccountType,
 } from '@keeper/shared';
+import { SearchableSelect } from './common/SearchableSelect';
 
 interface QuickActionsModalProps {
   isOpen: boolean;
@@ -327,20 +328,19 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
             <form onSubmit={handleRecordPayment} className="space-y-4">
               {/* Member select */}
               <div>
-                <label className="block text-xs font-bold text-slate-700">Member *</label>
-                <select
+                <label className="block text-xs font-bold text-slate-700 mb-1">Select Member *</label>
+                <SearchableSelect
+                  options={members.map((m) => ({
+                    value: m.id,
+                    label: m.fullName,
+                    sublabel: m.membershipCode,
+                    badge: m.phone || undefined,
+                  }))}
                   value={payMemberId}
-                  onChange={(e) => setPayMemberId(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-emerald-500 focus:outline-none"
-                  required
-                >
-                  <option value="">-- Choose Member --</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.fullName} {m.membershipCode ? `[${m.membershipCode}]` : ''}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setPayMemberId}
+                  placeholder="Search or select member..."
+                  searchPlaceholder="Type member name, code or phone..."
+                />
               </div>
 
               {/* Target Type selector */}
@@ -673,13 +673,18 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">Membership Code (Optional)</label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-700">Membership Code</label>
+                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
+                      Auto-generated if empty
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={memCode}
                     onChange={(e) => setMemCode(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono"
-                    placeholder="e.g. MEM-045"
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono placeholder:text-slate-400"
+                    placeholder="Auto-generated (e.g. KCA-001)"
                   />
                 </div>
               </div>

@@ -198,3 +198,70 @@ export const me = async (req: AuthenticatedRequest, res: Response, next: NextFun
     next(error);
   }
 };
+
+export const sendOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.includes('@')) {
+      res.status(400).json({ message: 'Valid email address is required' });
+      return;
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    await prisma.emailVerification.create({
+      data: {
+        email: email.toLowerCase(),
+        code,
+        expiresAt,
+      },
+    });
+
+    const { sendOtpEmail } = await import('../services/email.service.js');
+    await sendOtpEmail({ to: email.toLowerCase(), code });
+
+    res.json({ message: 'Verification OTP sent to your email' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      res.status(400).json({ message: 'Email and 6-digit OTP code are required' });
+      return;
+    }
+
+    const record = await prisma.emailVerification.findFirst({
+      where: {
+        email: email.toLowerCase(),
+        code: code.trim(),
+        expiresAt: { gt: new Date() },
+        verifiedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) {
+      res.status(400).json({ message: 'Invalid or expired OTP code' });
+      return;
+    }
+
+    await prisma.emailVerification.update({
+      where: { id: record.id },
+      data: { verifiedAt: new Date() },
+    });
+
+    await prisma.user.updateMany({
+      where: { email: email.toLowerCase() },
+      data: { isEmailVerified: true },
+    });
+
+    res.json({ message: 'Email verified successfully', verified: true });
+  } catch (error) {
+    next(error);
+  }
+};

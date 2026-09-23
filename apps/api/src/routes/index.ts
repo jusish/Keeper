@@ -11,6 +11,7 @@ import reportRoutes from './report.routes.js';
 import adminRoutes from './admin.routes.js';
 import auditRoutes from './audit.routes.js';
 import debtRoutes from './debt.routes.js';
+import invitationRoutes from './invitation.routes.js';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use('/reports', reportRoutes);
 router.use('/admin', adminRoutes);
 router.use('/audit', auditRoutes);
 router.use('/debts', debtRoutes);
+router.use('/invitations', invitationRoutes);
 
 export default router;

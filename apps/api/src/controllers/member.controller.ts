@@ -152,10 +152,31 @@ export const createMember = async (
     const input = memberSchema.parse(req.body);
 
     const result = await prisma.$transaction(async (tx) => {
+      let finalCode = input.membershipCode?.trim();
+      if (!finalCode) {
+        const tenant = await tx.tenant.findUnique({ where: { id: tenantId } });
+        const prefix = tenant?.slug
+          ? tenant.slug.split('-')[0].substring(0, 3).toUpperCase()
+          : 'MEM';
+        const count = await tx.member.count({ where: { tenantId } });
+        let seq = count + 1;
+        finalCode = `${prefix}-${String(seq).padStart(3, '0')}`;
+        let exists = await tx.member.findUnique({
+          where: { tenantId_membershipCode: { tenantId, membershipCode: finalCode } },
+        });
+        while (exists) {
+          seq++;
+          finalCode = `${prefix}-${String(seq).padStart(3, '0')}`;
+          exists = await tx.member.findUnique({
+            where: { tenantId_membershipCode: { tenantId, membershipCode: finalCode } },
+          });
+        }
+      }
+
       const member = await tx.member.create({
         data: {
           tenantId,
-          membershipCode: input.membershipCode,
+          membershipCode: finalCode,
           fullName: input.fullName,
           phone: input.phone,
           email: input.email || null,

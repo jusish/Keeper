@@ -136,37 +136,66 @@ export const createSession = async (
     const input = createSessionSchema.parse(req.body);
 
     const result = await prisma.$transaction(async (tx) => {
-      const session = await tx.attendanceSession.create({
-        data: {
-          tenantId,
-          title: input.title,
-          sessionType: input.sessionType,
-          sessionDate: new Date(input.sessionDate),
-          startTime: input.startTime,
-          endTime: input.endTime,
-          isRecurring: input.isRecurring,
-          recurrenceRule: input.recurrenceRule,
-          notes: input.notes,
-          recordedByUserId: userId,
-          status: SessionStatus.SCHEDULED,
-        },
-      });
-
       const activeMembers = await tx.member.findMany({
         where: { tenantId, status: 'ACTIVE' },
       });
 
-      if (activeMembers.length > 0) {
-        await tx.attendanceRecord.createMany({
-          data: activeMembers.map((m) => ({
-            sessionId: session.id,
-            memberId: m.id,
-            status: AttendanceStatus.PRESENT,
-          })),
-        });
+      // Parse recurrence if specified: e.g. "WEEKLY:4" or "FREQ=WEEKLY;COUNT=4"
+      let occurrences = 1;
+      let intervalDays = 7;
+      if (input.isRecurring && input.recurrenceRule) {
+        const rule = input.recurrenceRule.toUpperCase();
+        if (rule.includes('MONTHLY')) {
+          intervalDays = 30;
+        } else if (rule.includes('BIWEEKLY')) {
+          intervalDays = 14;
+        } else {
+          intervalDays = 7;
+        }
+
+        const countMatch = rule.match(/(?:COUNT=|:)(\d+)/);
+        if (countMatch && countMatch[1]) {
+          occurrences = Math.min(Math.max(parseInt(countMatch[1], 10), 1), 24);
+        }
       }
 
-      return session;
+      const createdSessions = [];
+      const baseDate = new Date(input.sessionDate);
+
+      for (let i = 0; i < occurrences; i++) {
+        const sessionDate = new Date(baseDate);
+        sessionDate.setDate(baseDate.getDate() + (i * intervalDays));
+
+        const session = await tx.attendanceSession.create({
+          data: {
+            tenantId,
+            title: occurrences > 1 ? `${input.title} (Part ${i + 1}/${occurrences})` : input.title,
+            sessionType: input.sessionType,
+            sessionDate,
+            startTime: input.startTime,
+            endTime: input.endTime,
+            isRecurring: input.isRecurring,
+            recurrenceRule: input.recurrenceRule,
+            notes: input.notes,
+            recordedByUserId: userId,
+            status: SessionStatus.SCHEDULED,
+          },
+        });
+
+        if (activeMembers.length > 0) {
+          await tx.attendanceRecord.createMany({
+            data: activeMembers.map((m) => ({
+              sessionId: session.id,
+              memberId: m.id,
+              status: AttendanceStatus.PRESENT,
+            })),
+          });
+        }
+
+        createdSessions.push(session);
+      }
+
+      return createdSessions[0];
     });
 
     res.status(201).json(result);
@@ -186,9 +215,19 @@ export const markAttendance = async (
     const input = markAttendanceSchema.parse(req.body);
 
     // Verify session
-    await prisma.attendanceSession.findFirstOrThrow({
+    const existing = await prisma.attendanceSession.findFirst({
       where: { id, tenantId },
     });
+
+    if (!existing) {
+      res.status(404).json({ message: 'Session not found' });
+      return;
+    }
+
+    if (existing.status === SessionStatus.COMPLETED) {
+      res.status(400).json({ message: 'Attendance for this session has already been finalized and locked.' });
+      return;
+    }
 
     await prisma.$transaction(async (tx) => {
       for (const rec of input.records) {
@@ -251,18 +290,27 @@ export const cancelSession = async (
     const tenantId = getActiveTenantId(req);
     const input = cancelSessionSchema.parse(req.body);
 
-    const session = await prisma.attendanceSession.updateMany({
+    const existing = await prisma.attendanceSession.findFirst({
       where: { id, tenantId },
+    });
+
+    if (!existing) {
+      res.status(404).json({ message: 'Session not found' });
+      return;
+    }
+
+    if (existing.status === SessionStatus.COMPLETED) {
+      res.status(400).json({ message: 'Cannot cancel an attendance session that has already been finalized and locked.' });
+      return;
+    }
+
+    await prisma.attendanceSession.update({
+      where: { id },
       data: {
         status: SessionStatus.CANCELLED,
         cancellationReason: input.cancellationReason,
       },
     });
-
-    if (session.count === 0) {
-      res.status(404).json({ message: 'Session not found' });
-      return;
-    }
 
     const sess = await prisma.attendanceSession.findUnique({ where: { id } });
     await recordAuditLog({

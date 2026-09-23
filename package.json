@@ -2,7 +2,7 @@
   "name": "keeper-monorepo",
   "private": true,
   "version": "1.0.0",
-  "description": "Keeper - Community & Choir Operations Platform",
+  "description": "Keeper - Community Treasury, Member Directory & Accountability Platform",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",

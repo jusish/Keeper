@@ -9,6 +9,10 @@ interface LayoutProps {
   currentPath: string;
   onNavigate: (path: string) => void;
   onRefresh?: () => void;
+  isQuickActionsOpen?: boolean;
+  onCloseQuickActions?: () => void;
+  quickActionTab?: string;
+  onOpenQuickActions?: (tab?: string) => void;
 }
 
 export const Layout: React.FC<LayoutProps> = ({
@@ -16,15 +20,34 @@ export const Layout: React.FC<LayoutProps> = ({
   currentPath,
   onNavigate,
   onRefresh,
+  isQuickActionsOpen: controlledIsOpen,
+  onCloseQuickActions: controlledOnClose,
+  quickActionTab: controlledTab,
+  onOpenQuickActions: controlledOnOpen,
 }) => {
-  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
-  const [quickActionTab, setQuickActionTab] = useState('payment');
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const [internalTab, setInternalTab] = useState('payment');
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const isQuickActionsOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const quickActionTab = controlledTab !== undefined ? controlledTab : internalTab;
+
   const handleOpenQuickActions = (tab: string = 'payment') => {
-    setQuickActionTab(tab);
-    setIsQuickActionsOpen(true);
+    if (controlledOnOpen) {
+      controlledOnOpen(tab);
+    } else {
+      setInternalTab(tab);
+      setInternalIsOpen(true);
+    }
+  };
+
+  const handleCloseQuickActions = () => {
+    if (controlledOnClose) {
+      controlledOnClose();
+    } else {
+      setInternalIsOpen(false);
+    }
   };
 
   const handleTriggerAction = (action: string) => {
@@ -36,7 +59,7 @@ export const Layout: React.FC<LayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <Navbar
         onOpenQuickActions={handleOpenQuickActions}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
@@ -61,7 +84,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
       <QuickActionsModal
         isOpen={isQuickActionsOpen}
-        onClose={() => setIsQuickActionsOpen(false)}
+        onClose={handleCloseQuickActions}
         defaultTab={quickActionTab}
         onSuccess={onRefresh}
       />

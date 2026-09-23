@@ -37,6 +37,8 @@ export const authenticate = (
   }
 };
 
+export const requireAuth = authenticate;
+
 export const requireRole = (...allowedRoles: Role[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {

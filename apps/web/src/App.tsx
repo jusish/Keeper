@@ -13,11 +13,16 @@ import { MembersPage } from './pages/MembersPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { SuperAdminPortal } from './pages/admin/SuperAdminPortal';
 import { DebtsPage } from './pages/DebtsPage';
+import { AcceptInvitePage } from './pages/AcceptInvitePage';
 
 export const App: React.FC = () => {
   const { user, isLoading } = useAuth();
   const [currentPath, setCurrentPath] = useState(window.location.pathname || '/');
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Lifted Quick Actions modal state so all pages and buttons can trigger it
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
+  const [quickActionTab, setQuickActionTab] = useState('payment');
 
   useEffect(() => {
     const handlePopState = () => {
@@ -36,12 +41,26 @@ export const App: React.FC = () => {
     setRefreshKey((k) => k + 1);
   };
 
+  const handleOpenQuickActions = (tab: string = 'payment') => {
+    setQuickActionTab(tab);
+    setIsQuickActionsOpen(true);
+  };
+
+  const handleCloseQuickActions = () => {
+    setIsQuickActionsOpen(false);
+  };
+
+  // If user is accessing an invitation link, allow them in directly
+  if (currentPath.startsWith('/accept-invite')) {
+    return <AcceptInvitePage />;
+  }
+
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-900 text-white">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-500 border-t-transparent" />
-          <span className="text-xs font-semibold text-slate-400">Loading Keeper...</span>
+          <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
+          <span className="text-xs font-semibold text-slate-500">Loading Keeper...</span>
         </div>
       </div>
     );
@@ -78,7 +97,7 @@ export const App: React.FC = () => {
         <DashboardPage
           key={refreshKey}
           onNavigate={navigate}
-          onOpenQuickActions={(tab) => {}}
+          onOpenQuickActions={handleOpenQuickActions}
         />
       );
     }
@@ -89,7 +108,7 @@ export const App: React.FC = () => {
       return (
         <ContributionsPage
           key={refreshKey}
-          onOpenQuickActions={(tab) => {}}
+          onOpenQuickActions={handleOpenQuickActions}
         />
       );
     }
@@ -97,7 +116,7 @@ export const App: React.FC = () => {
       return (
         <EventsPage
           key={refreshKey}
-          onOpenQuickActions={(tab) => {}}
+          onOpenQuickActions={handleOpenQuickActions}
         />
       );
     }
@@ -105,7 +124,7 @@ export const App: React.FC = () => {
       return (
         <AccountsPage
           key={refreshKey}
-          onOpenQuickActions={(tab) => {}}
+          onOpenQuickActions={handleOpenQuickActions}
         />
       );
     }
@@ -113,7 +132,7 @@ export const App: React.FC = () => {
       return (
         <ExpensesPage
           key={refreshKey}
-          onOpenQuickActions={(tab) => {}}
+          onOpenQuickActions={handleOpenQuickActions}
         />
       );
     }
@@ -127,7 +146,7 @@ export const App: React.FC = () => {
       return (
         <MembersPage
           key={refreshKey}
-          onOpenQuickActions={(tab) => {}}
+          onOpenQuickActions={handleOpenQuickActions}
         />
       );
     }
@@ -135,7 +154,7 @@ export const App: React.FC = () => {
       <DashboardPage
         key={refreshKey}
         onNavigate={navigate}
-        onOpenQuickActions={(tab) => {}}
+        onOpenQuickActions={handleOpenQuickActions}
       />
     );
   };
@@ -145,6 +164,10 @@ export const App: React.FC = () => {
       currentPath={currentPath}
       onNavigate={navigate}
       onRefresh={handleRefresh}
+      isQuickActionsOpen={isQuickActionsOpen}
+      onCloseQuickActions={handleCloseQuickActions}
+      quickActionTab={quickActionTab}
+      onOpenQuickActions={handleOpenQuickActions}
     >
       {renderPage()}
     </Layout>
