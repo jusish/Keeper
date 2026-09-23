@@ -42,7 +42,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
   const [data, setData] = useState<ContributionMatrixResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SETTLED' | 'ARREARS' | 'SURPLUS'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SETTLED' | 'ARREARS' | 'ADVANCE'>('ALL');
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
@@ -61,16 +61,17 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
     loadAccounts();
   }, []);
 
-  const loadPlans = async () => {
+  const loadPlans = async (targetPlanId?: string) => {
     try {
       const res = await api.get('/contributions/plans');
       setPlans(res.data);
-      if (res.data.length > 0 && !selectedPlanId) {
-        const defaultPlan = res.data.find((p: any) => p.isActive) || res.data[0];
-        setSelectedPlanId(defaultPlan.id);
-        loadMatrix(defaultPlan.id);
-      } else if (selectedPlanId) {
-        loadMatrix(selectedPlanId);
+      const activeId = targetPlanId || selectedPlanId;
+      if (res.data.length > 0) {
+        const found = res.data.find((p: any) => p.id === activeId) ||
+          res.data.find((p: any) => p.isActive) ||
+          res.data[0];
+        setSelectedPlanId(found.id);
+        await loadMatrix(found.id);
       } else {
         setIsLoading(false);
       }
@@ -90,10 +91,14 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
   };
 
   const loadMatrix = async (planId?: string) => {
+    const idToFetch = planId || selectedPlanId;
+    if (!idToFetch) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
-      const params = planId ? { planId } : selectedPlanId ? { planId: selectedPlanId } : undefined;
-      const res = await api.get('/contributions/matrix', { params });
+      const res = await api.get('/contributions/matrix', { params: { planId: idToFetch } });
       setData(res.data);
     } catch (err) {
       console.error('Failed to load contributions matrix', err);
@@ -121,10 +126,12 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
 
       setShowCreatePlanModal(false);
       setNewPlanTitle('');
-      await loadPlans();
       if (res.data?.plan?.id) {
-        setSelectedPlanId(res.data.plan.id);
-        loadMatrix(res.data.plan.id);
+        const createdId = res.data.plan.id;
+        setSelectedPlanId(createdId);
+        await loadPlans(createdId);
+      } else {
+        await loadPlans();
       }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to create contribution plan');
@@ -169,7 +176,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
       statusFilter === 'ALL' ||
       (statusFilter === 'SETTLED' && row.totalRemaining === 0) ||
       (statusFilter === 'ARREARS' && row.totalRemaining > 0) ||
-      (statusFilter === 'SURPLUS' && row.totalSurplus > 0);
+      (statusFilter === 'ADVANCE' && ((row.advanceCredit || row.member.creditBalance) > 0));
 
     return matchSearch && matchStatus;
   });
@@ -246,7 +253,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                 {data.plan.title}
               </h1>
               <p className="mt-0.5 text-xs text-slate-500">
-                Mandatory unifying dues across all members with surplus (+) credit tracking and advance payments.
+                Mandatory unifying dues across all members with automatic period roll-forward and advance credit tracking.
               </p>
             </div>
 
@@ -303,12 +310,12 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
               progress={data.overallCollectionRate}
             />
             <StatCard
-              title="Advance & Surplus Credit"
-              value={formatCurrency(data.grandTotalSurplus, tenant?.currency)}
-              valueColor="text-emerald-600"
-              subtitle="Pre-paid forward credit balances"
+              title="Advance / Prepaid Credit"
+              value={formatCurrency(data.grandTotalAdvance ?? 0, tenant?.currency)}
+              valueColor="text-emerald-700"
+              subtitle="Prepaid dues covering future periods"
               icon={Sparkles}
-              color="blue"
+              color="emerald"
             />
             <StatCard
               title="Total Arrears Balance"
@@ -365,14 +372,14 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                 In Arrears
               </button>
               <button
-                onClick={() => setStatusFilter('SURPLUS')}
+                onClick={() => setStatusFilter('ADVANCE')}
                 className={`rounded-lg px-2.5 py-1 text-xs font-bold transition whitespace-nowrap ${
-                  statusFilter === 'SURPLUS'
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
+                  statusFilter === 'ADVANCE'
+                    ? 'bg-emerald-700 text-white shadow-2xs'
+                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                 }`}
               >
-                Surplus (+)
+                Advance (+)
               </button>
             </div>
           </div>
@@ -395,7 +402,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                   ))}
                   <th className="px-3 py-3 text-right bg-slate-100/50 min-w-[90px]">Paid</th>
                   <th className="px-3 py-3 text-right bg-slate-100/50 min-w-[90px]">Remaining</th>
-                  <th className="px-3 py-3 text-right bg-emerald-50/50 min-w-[90px]">Surplus (+)</th>
+                  <th className="px-3 py-3 text-right bg-emerald-50/50 min-w-[100px]">Advance Credit (+)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -422,22 +429,26 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
 
                       let bg = 'bg-slate-50 text-slate-400';
                       let label = '0';
-                      if (cell.status === AssessmentStatus.PAID) {
+                      if (cell.isExempt || cell.expectedAmount === 0) {
+                        bg = 'bg-slate-100/90 text-slate-400 border border-slate-200/60 font-medium text-[10px]';
+                        label = 'N/A';
+                      } else if (cell.status === AssessmentStatus.PAID) {
                         bg = 'bg-emerald-100/70 text-emerald-800 font-bold';
                         label = '✓';
                       } else if (cell.status === AssessmentStatus.PARTIAL) {
                         bg = 'bg-amber-100/80 text-amber-900 font-bold';
                         label = `${Math.round(cell.paidAmount / 1000)}k`;
-                      } else if (cell.status === AssessmentStatus.SURPLUS) {
-                        bg = 'bg-blue-100/80 text-blue-900 font-bold';
-                        label = `+${Math.round(cell.surplusAmount / 1000)}k`;
                       }
 
                       return (
                         <td key={p.id} className="px-1.5 py-2 text-center">
                           <div
                             className={`rounded-md py-1 px-1 text-[11px] transition ${bg}`}
-                            title={`${row.member.fullName} - ${p.label}: Paid ${cell.paidAmount} / ${cell.expectedAmount}`}
+                            title={
+                              cell.isExempt || cell.expectedAmount === 0
+                                ? `${row.member.fullName} - ${p.label}: Not applicable (joined later or exempt)`
+                                : `${row.member.fullName} - ${p.label}: Paid ${cell.paidAmount} / ${cell.expectedAmount}`
+                            }
                           >
                             {label}
                           </div>
@@ -456,7 +467,9 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                       {formatCurrency(row.totalRemaining, tenant?.currency)}
                     </td>
                     <td className="px-3 py-2.5 text-right font-bold text-emerald-700 font-mono bg-emerald-50/20">
-                      {row.totalSurplus > 0 ? `+${formatCurrency(row.totalSurplus, tenant?.currency)}` : '—'}
+                      {(row.advanceCredit || row.member?.creditBalance) > 0
+                        ? `+${formatCurrency(row.advanceCredit || row.member?.creditBalance, tenant?.currency)}`
+                        : '—'}
                     </td>
                   </tr>
                 ))}
@@ -478,7 +491,7 @@ export const ContributionsPage: React.FC<ContributionsPageProps> = ({
                     {formatCurrency(data.grandTotalRemaining, tenant?.currency)}
                   </td>
                   <td className="px-3 py-3 text-right font-mono text-emerald-700">
-                    {formatCurrency(data.grandTotalSurplus, tenant?.currency)}
+                    {formatCurrency(data.grandTotalAdvance ?? 0, tenant?.currency)}
                   </td>
                 </tr>
               </tfoot>

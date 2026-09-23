@@ -190,18 +190,24 @@ export const createMember = async (
       // Auto-assign to any active Umusanzu plan periods
       const activePlans = await tx.contributionPlan.findMany({
         where: { tenantId, isActive: true },
-        include: { periods: true },
+        include: { periods: { orderBy: { orderIndex: 'asc' } } },
       });
+
+      const memberJoined = member.joinedDate || new Date();
+      const shouldProrate = input.startFromJoinDate !== false;
 
       for (const plan of activePlans) {
         for (const period of plan.periods) {
+          // If member joined after this period's due date, mark exempt (0 expected)
+          const isBeforeJoin = shouldProrate && period.dueDate < memberJoined;
+
           await tx.contributionAssessment.create({
             data: {
               periodId: period.id,
               memberId: member.id,
-              expectedAmount: plan.defaultAmount,
+              expectedAmount: isBeforeJoin ? 0 : plan.defaultAmount,
               paidAmount: 0,
-              status: AssessmentStatus.UNPAID,
+              status: isBeforeJoin ? AssessmentStatus.PAID : AssessmentStatus.UNPAID,
               surplusAmount: 0,
             },
           });

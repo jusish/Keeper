@@ -99,6 +99,7 @@ export interface ContributionMatrixCell {
   surplusAmount: number;
   remainingAmount: number;
   status: AssessmentStatus;
+  isExempt?: boolean;
 }
 
 export interface ContributionMatrixRow {
@@ -108,6 +109,7 @@ export interface ContributionMatrixRow {
   totalExpected: number;
   totalSurplus: number;
   totalRemaining: number;
+  advanceCredit: number;
   overallStatus: AssessmentStatus;
 }
 
@@ -128,6 +130,7 @@ export interface ContributionMatrixResponse {
   grandTotalExpected: number;
   grandTotalCollected: number;
   grandTotalSurplus: number;
+  grandTotalAdvance: number;
   grandTotalRemaining: number;
   overallCollectionRate: number;
 }

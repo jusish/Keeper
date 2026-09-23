@@ -26,6 +26,8 @@ import {
   TargetAudience,
   AssessmentStatus,
 } from '@keeper/shared';
+import { pdf } from '@react-pdf/renderer';
+import { EventSettlementPDF } from '../reports/EventSettlementPDF';
 
 interface EventsPageProps {
   onOpenQuickActions: (tab: string) => void;
@@ -43,6 +45,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
   const [memberFilter, setMemberFilter] = useState<'ALL' | 'SETTLED' | 'PENDING' | 'SURPLUS'>('ALL');
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // New Event Form State
   const [newTitle, setNewTitle] = useState('');
@@ -137,6 +140,32 @@ export const EventsPage: React.FC<EventsPageProps> = ({
     return true;
   });
 
+  const handleExportPdf = async () => {
+    if (!settlement) return;
+    setIsExportingPdf(true);
+    try {
+      const blob = await pdf(
+        <EventSettlementPDF
+          settlement={settlement}
+          tenantName={tenant?.name || 'Community Organization'}
+          currency={tenant?.currency || 'RWF'}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Event_Settlement_${(settlement.event?.title || 'Report').replace(/\s+/g, '_')}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to generate Event PDF', err);
+      alert('Failed to generate Event Settlement PDF. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Title & Event Switcher */}
@@ -199,7 +228,16 @@ export const EventsPage: React.FC<EventsPageProps> = ({
               </h2>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleExportPdf}
+                disabled={isExportingPdf}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5 text-slate-500" />
+                <span>{isExportingPdf ? 'Exporting...' : 'Export PDF'}</span>
+              </button>
+
               <button
                 onClick={() => setShowWhatsApp(true)}
                 className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition"

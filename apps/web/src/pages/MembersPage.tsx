@@ -14,8 +14,11 @@ import {
   X,
   CreditCard,
   UserCheck,
+  Download,
 } from 'lucide-react';
 import { Gender, MemberStatus } from '@keeper/shared';
+import { pdf } from '@react-pdf/renderer';
+import { MembersRosterPDF } from '../reports/MembersRosterPDF';
 
 interface MembersPageProps {
   onOpenQuickActions: (tab: string) => void;
@@ -32,6 +35,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [memberDetail, setMemberDetail] = useState<any | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   useEffect(() => {
     loadMembers();
@@ -73,6 +77,32 @@ export const MembersPage: React.FC<MembersPageProps> = ({
     return matchSearch && matchStatus;
   });
 
+  const handleExportPdf = async () => {
+    if (members.length === 0) return;
+    setIsExportingPdf(true);
+    try {
+      const blob = await pdf(
+        <MembersRosterPDF
+          members={filteredMembers}
+          tenantName={tenant?.name || 'Community Organization'}
+          currency={tenant?.currency || 'RWF'}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Members_Directory_${(tenant?.name || 'Community').replace(/\s+/g, '_')}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to generate Members PDF', err);
+      alert('Failed to generate Members Directory PDF. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -86,15 +116,26 @@ export const MembersPage: React.FC<MembersPageProps> = ({
           </p>
         </div>
 
-        {user?.role !== 'VIEWER' && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => onOpenQuickActions('member')}
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition disabled:opacity-50"
           >
-            <Plus className="h-4 w-4" />
-            <span>Add Member</span>
+            <Download className="h-4 w-4 text-slate-500" />
+            <span>{isExportingPdf ? 'Exporting...' : 'Export Directory PDF'}</span>
           </button>
-        )}
+
+          {user?.role !== 'VIEWER' && (
+            <button
+              onClick={() => onOpenQuickActions('member')}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Member</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Toolbar */}

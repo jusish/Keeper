@@ -28,7 +28,10 @@ import {
   Receipt,
   User,
   Building,
+  Download,
 } from 'lucide-react';
+import { pdf } from '@react-pdf/renderer';
+import { DebtsStatementPDF } from '../reports/DebtsStatementPDF';
 
 export const DebtsPage: React.FC = () => {
   const { user, tenant } = useAuth();
@@ -37,6 +40,7 @@ export const DebtsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // Modals
   const [isRecordDebtOpen, setIsRecordDebtOpen] = useState(false);
@@ -183,6 +187,32 @@ export const DebtsPage: React.FC = () => {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!data) return;
+    setIsExportingPdf(true);
+    try {
+      const blob = await pdf(
+        <DebtsStatementPDF
+          summary={data}
+          tenantName={tenant?.name || 'Community Organization'}
+          currency={tenant?.currency || 'RWF'}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Debts_Statement_${(tenant?.name || 'Community').replace(/\s+/g, '_')}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to generate Debts PDF', err);
+      alert('Failed to generate Debts Statement PDF. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -202,6 +232,15 @@ export const DebtsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs transition disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5 text-slate-500" />
+            <span>{isExportingPdf ? 'Exporting...' : 'Export Statement PDF'}</span>
+          </button>
+
           <button
             onClick={fetchData}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs transition"

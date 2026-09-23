@@ -15,8 +15,11 @@ import {
   Calendar,
   Search,
   Layers,
+  Download,
 } from 'lucide-react';
 import { AccountType } from '@keeper/shared';
+import { pdf } from '@react-pdf/renderer';
+import { AccountLedgerPDF } from '../reports/AccountLedgerPDF';
 
 interface AccountsPageProps {
   onOpenQuickActions: (tab: string) => void;
@@ -32,6 +35,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isLedgerLoading, setIsLedgerLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // New Account state
   const [newName, setNewName] = useState('');
@@ -76,6 +80,33 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
   const handleSelectAccount = (id: string) => {
     setSelectedAccountId(id);
     loadLedger(id);
+  };
+
+  const handleExportPdf = async () => {
+    if (!ledgerData) return;
+    setIsExportingPdf(true);
+    try {
+      const blob = await pdf(
+        <AccountLedgerPDF
+          account={ledgerData.account}
+          transactions={ledgerData.transactions || []}
+          tenantName={tenant?.name || 'Community Organization'}
+          currency={tenant?.currency || 'RWF'}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Account_Ledger_${(ledgerData.account?.name || 'Account').replace(/\s+/g, '_')}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to generate Account Ledger PDF', err);
+      alert('Failed to generate Account Ledger PDF. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const handleCreateAccount = async (e: React.FormEvent) => {
@@ -240,6 +271,15 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({
               </h2>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={handleExportPdf}
+                disabled={isExportingPdf}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition disabled:opacity-50"
+              >
+                <Download className="h-4 w-4 text-slate-500" />
+                <span>{isExportingPdf ? 'Exporting...' : 'Export Ledger PDF'}</span>
+              </button>
+
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-right">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-700">
                   Current Balance

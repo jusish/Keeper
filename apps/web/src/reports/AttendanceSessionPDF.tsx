@@ -1,0 +1,293 @@
+import React from 'react';
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+} from '@react-pdf/renderer';
+
+const styles = StyleSheet.create({
+  page: {
+    padding: 24,
+    fontSize: 8,
+    fontFamily: 'Helvetica',
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    marginBottom: 12,
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#059669',
+    paddingBottom: 8,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#064e3b',
+    textTransform: 'uppercase',
+  },
+  subtitle: {
+    fontSize: 9,
+    color: '#475569',
+    marginTop: 2,
+  },
+  metaText: {
+    fontSize: 8,
+    color: '#64748b',
+    textAlign: 'right',
+  },
+  kpiRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 10,
+  },
+  kpiBox: {
+    flex: 1,
+    padding: 6,
+    borderRadius: 4,
+    backgroundColor: '#f8fafc',
+    borderWidth: 0.5,
+    borderColor: '#cbd5e1',
+  },
+  kpiLabel: {
+    fontSize: 7,
+    color: '#64748b',
+    textTransform: 'uppercase',
+    fontWeight: 'bold',
+  },
+  kpiValue: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    marginTop: 2,
+  },
+  cancelNotice: {
+    padding: 8,
+    backgroundColor: '#fef2f2',
+    borderWidth: 0.8,
+    borderColor: '#fca5a5',
+    borderRadius: 4,
+    marginVertical: 6,
+  },
+  cancelText: {
+    color: '#991b1b',
+    fontWeight: 'bold',
+    fontSize: 8,
+  },
+  table: {
+    width: '100%',
+    borderWidth: 0.5,
+    borderColor: '#cbd5e1',
+    marginTop: 6,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    borderBottomWidth: 0.8,
+    borderBottomColor: '#94a3b8',
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#e2e8f0',
+    minHeight: 14,
+    alignItems: 'center',
+  },
+  tableRowAlt: {
+    backgroundColor: '#f8fafc',
+  },
+  colMember: {
+    width: '32%',
+    padding: 3,
+    paddingLeft: 4,
+  },
+  colPhone: {
+    width: '18%',
+    padding: 3,
+  },
+  colStatus: {
+    width: '18%',
+    padding: 3,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  colNote: {
+    width: '32%',
+    padding: 3,
+    paddingRight: 4,
+    color: '#475569',
+  },
+  presentChip: {
+    color: '#047857',
+  },
+  excusedChip: {
+    color: '#b45309',
+  },
+  lateChip: {
+    color: '#7c3aed',
+  },
+  unexcusedChip: {
+    color: '#b91c1c',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    backgroundColor: '#e2e8f0',
+    borderTopWidth: 1,
+    borderTopColor: '#94a3b8',
+    fontWeight: 'bold',
+    minHeight: 16,
+    alignItems: 'center',
+  },
+  signatures: {
+    marginTop: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 30,
+  },
+  sigBox: {
+    width: 140,
+    borderTopWidth: 0.8,
+    borderTopColor: '#64748b',
+    paddingTop: 4,
+    textAlign: 'center',
+    fontSize: 8,
+    color: '#475569',
+  },
+});
+
+interface AttendanceSessionPDFProps {
+  session: any;
+  tenantName: string;
+}
+
+export const AttendanceSessionPDF: React.FC<AttendanceSessionPDFProps> = ({
+  session,
+  tenantName,
+}) => {
+  const records = session?.records || [];
+  const counts = session?.recordCount || {
+    present: records.filter((r: any) => r.status === 'PRESENT').length,
+    excused: records.filter((r: any) => r.status === 'EXCUSED').length,
+    late: records.filter((r: any) => r.status === 'LATE').length,
+    unexcused: records.filter((r: any) => r.status === 'UNEXCUSED').length,
+    total: records.length,
+  };
+
+  const attendanceRate = counts.total > 0
+    ? Math.round((counts.present / counts.total) * 100)
+    : 0;
+
+  return (
+    <Document>
+      <Page size="A4" orientation="portrait" style={styles.page}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.titleRow}>
+            <View>
+              <Text style={styles.title}>{tenantName} — Attendance Session Report</Text>
+              <Text style={styles.subtitle}>
+                Session: {session.title} • Date: {session.sessionDate ? new Date(session.sessionDate).toLocaleDateString('en-GB') : ''} {session.startTime ? `at ${session.startTime}` : ''} • Type: {session.sessionType}
+              </Text>
+            </View>
+            <View>
+              <Text style={styles.metaText}>Generated on: {new Date().toLocaleDateString('en-GB')}</Text>
+              <Text style={styles.metaText}>Status: {session.status}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Cancellation Notice if Cancelled */}
+        {session.status === 'CANCELLED' && (
+          <View style={styles.cancelNotice}>
+            <Text style={styles.cancelText}>
+              SESSION CANCELLED — Reason: {session.cancellationReason || 'No reason provided'}
+            </Text>
+          </View>
+        )}
+
+        {/* KPI Row */}
+        <View style={styles.kpiRow}>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>Total Expected</Text>
+            <Text style={styles.kpiValue}>{counts.total} Members</Text>
+          </View>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>Present ({attendanceRate}%)</Text>
+            <Text style={[styles.kpiValue, { color: '#047857' }]}>{counts.present}</Text>
+          </View>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>Excused</Text>
+            <Text style={[styles.kpiValue, { color: '#b45309' }]}>{counts.excused}</Text>
+          </View>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>Late Arrivals</Text>
+            <Text style={[styles.kpiValue, { color: '#7c3aed' }]}>{counts.late}</Text>
+          </View>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>Unexcused Absences</Text>
+            <Text style={[styles.kpiValue, { color: '#b91c1c' }]}>{counts.unexcused}</Text>
+          </View>
+        </View>
+
+        {/* Attendance Roster Table */}
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={styles.colMember}>Member Name</Text>
+            <Text style={styles.colPhone}>Contact</Text>
+            <Text style={styles.colStatus}>Status</Text>
+            <Text style={styles.colNote}>Excuse Note / Comments</Text>
+          </View>
+
+          {records.map((r: any, idx: number) => {
+            let statusStyle = styles.presentChip;
+            if (r.status === 'EXCUSED') statusStyle = styles.excusedChip;
+            else if (r.status === 'LATE') statusStyle = styles.lateChip;
+            else if (r.status === 'UNEXCUSED') statusStyle = styles.unexcusedChip;
+
+            return (
+              <View
+                key={r.id || idx}
+                style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : {}]}
+              >
+                <Text style={styles.colMember}>
+                  {r.memberFullName || r.member?.fullName || 'N/A'} {r.member?.membershipCode ? `(${r.member.membershipCode})` : ''}
+                </Text>
+                <Text style={styles.colPhone}>{r.member?.phone || '-'}</Text>
+                <Text style={[styles.colStatus, statusStyle]}>{r.status}</Text>
+                <Text style={styles.colNote}>{r.reasonNote || '-'}</Text>
+              </View>
+            );
+          })}
+
+          {/* Footer */}
+          <View style={styles.footerRow}>
+            <Text style={styles.colMember}>Total Roll Call: {records.length} Members</Text>
+            <Text style={styles.colPhone}></Text>
+            <Text style={styles.colStatus}>{counts.present} Present ({attendanceRate}%)</Text>
+            <Text style={styles.colNote}>{counts.unexcused} Absent</Text>
+          </View>
+        </View>
+
+        {/* Signatures */}
+        <View style={styles.signatures}>
+          <View style={styles.sigBox}>
+            <Text>Session Leader / Conductor</Text>
+          </View>
+          <View style={styles.sigBox}>
+            <Text>Attendance Secretary</Text>
+          </View>
+          <View style={styles.sigBox}>
+            <Text>Chairperson / President</Text>
+          </View>
+        </View>
+      </Page>
+    </Document>
+  );
+};

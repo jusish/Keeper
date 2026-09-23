@@ -84,6 +84,50 @@ export const getSessionById = async (
       return;
     }
 
+    // If session is unfinalized, auto-sync with active members who joined on or before this session date
+    if (session.status !== SessionStatus.COMPLETED && session.status !== SessionStatus.CANCELLED) {
+      const activeMembers = await prisma.member.findMany({
+        where: {
+          tenantId,
+          status: 'ACTIVE',
+          OR: [
+            { joinedDate: { lte: session.sessionDate } },
+            { joinedDate: null },
+          ],
+        },
+      });
+
+      const existingMemberIds = new Set(session.records.map((r) => r.memberId));
+      const missingMembers = activeMembers.filter((m) => !existingMemberIds.has(m.id));
+
+      if (missingMembers.length > 0) {
+        await prisma.attendanceRecord.createMany({
+          data: missingMembers.map((m) => ({
+            sessionId: session.id,
+            memberId: m.id,
+            status: AttendanceStatus.PRESENT,
+          })),
+        });
+
+        const refreshed = await prisma.attendanceSession.findUniqueOrThrow({
+          where: { id: session.id },
+          include: {
+            records: {
+              include: { member: true },
+              orderBy: [{ member: { fullName: 'asc' } }],
+            },
+          },
+        });
+        session.records = refreshed.records;
+      }
+
+      // Filter out any members who joined after this session date
+      session.records = session.records.filter((r) => {
+        if (!r.member.joinedDate) return true;
+        return r.member.joinedDate <= session.sessionDate;
+      });
+    }
+
     const present = session.records.filter((r) => r.status === AttendanceStatus.PRESENT).length;
     const excused = session.records.filter((r) => r.status === AttendanceStatus.ABSENT_EXCUSED).length;
     const unexcused = session.records.filter((r) => r.status === AttendanceStatus.ABSENT_UNEXCUSED).length;
@@ -182,9 +226,13 @@ export const createSession = async (
           },
         });
 
-        if (activeMembers.length > 0) {
+        const eligibleMembers = activeMembers.filter(
+          (m) => !m.joinedDate || m.joinedDate <= sessionDate
+        );
+
+        if (eligibleMembers.length > 0) {
           await tx.attendanceRecord.createMany({
-            data: activeMembers.map((m) => ({
+            data: eligibleMembers.map((m) => ({
               sessionId: session.id,
               memberId: m.id,
               status: AttendanceStatus.PRESENT,

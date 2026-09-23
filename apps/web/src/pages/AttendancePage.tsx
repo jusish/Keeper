@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../lib/utils';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import { StatCard } from '../components/common/StatCard';
+import { pdf } from '@react-pdf/renderer';
+import { AttendanceSessionPDF } from '../reports/AttendanceSessionPDF';
 import {
   UserCheck,
   Plus,
@@ -20,6 +22,10 @@ import {
   Check,
   Search,
   Lock,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  List,
 } from 'lucide-react';
 import {
   AttendanceStatus,
@@ -40,6 +46,9 @@ export const AttendancePage: React.FC = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'CALENDAR' | 'LIST'>('CALENDAR');
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // New Session form
   const [newTitle, setNewTitle] = useState('Tuesday General Assembly');
@@ -195,6 +204,54 @@ export const AttendancePage: React.FC = () => {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!sessionDetail) return;
+    setIsExportingPdf(true);
+    try {
+      const blob = await pdf(
+        <AttendanceSessionPDF
+          session={sessionDetail}
+          tenantName={tenant?.name || 'Community Organization'}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Attendance_${sessionDetail.title.replace(/\s+/g, '_')}_${sessionDetail.sessionDate ? sessionDetail.sessionDate.slice(0, 10) : 'report'}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to generate Attendance PDF', err);
+      alert('Failed to generate Attendance PDF. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const calYear = calendarMonth.getFullYear();
+  const calMonth = calendarMonth.getMonth();
+  const firstDayOfWeek = new Date(calYear, calMonth, 1).getDay();
+  const daysInCalMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+  const prevMonth = () => {
+    setCalendarMonth(new Date(calYear, calMonth - 1, 1));
+  };
+  const nextMonth = () => {
+    setCalendarMonth(new Date(calYear, calMonth + 1, 1));
+  };
+  const goToToday = () => {
+    setCalendarMonth(new Date());
+  };
+
+  const getSessionDateKey = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const todayStr = getSessionDateKey(new Date().toISOString());
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -219,62 +276,237 @@ export const AttendancePage: React.FC = () => {
         )}
       </div>
 
-      {/* Sessions Horizontal Ribbon */}
-      <div className="flex items-center gap-3 overflow-x-auto pb-2">
-        {sessions.map((sess) => {
-          const isSelected = sess.id === selectedSessionId;
-          const isCancelled = sess.status === SessionStatus.CANCELLED;
-          return (
-            <div
-              key={sess.id}
-              onClick={() => handleSelectSession(sess.id)}
-              className={`cursor-pointer shrink-0 rounded-2xl border p-3.5 w-64 transition ${
-                isSelected
-                  ? 'border-emerald-500 bg-white shadow-md ring-2 ring-emerald-500/20'
-                  : 'border-slate-200 bg-white/70 hover:bg-white'
+      {/* Calendar / List View Schedule Section */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+        {/* Controls Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={prevMonth}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+              title="Previous Month"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-extrabold text-slate-900 min-w-36 text-center">
+              {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+            </span>
+            <button
+              onClick={nextMonth}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+              title="Next Month"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <button
+              onClick={goToToday}
+              className="ml-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+            >
+              Today
+            </button>
+          </div>
+
+          {/* View Mode Switcher */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+            <button
+              onClick={() => setViewMode('CALENDAR')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                viewMode === 'CALENDAR'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span
-                  className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                    isCancelled
-                      ? 'bg-rose-100 text-rose-800'
-                      : sess.status === SessionStatus.COMPLETED
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-blue-100 text-blue-800'
-                  }`}
-                >
-                  {sess.status}
-                </span>
-                {sess.isRecurring && (
-                  <span className="flex items-center gap-0.5 text-[9px] text-slate-400 font-medium">
-                    <RotateCw className="h-2.5 w-2.5" />
-                    Repeating
-                  </span>
-                )}
-              </div>
-              <h3 className="mt-2 text-xs font-extrabold text-slate-900 truncate">
-                {sess.title}
-              </h3>
-              <p className="mt-1 text-[11px] text-slate-500 font-medium">
-                {formatDate(sess.sessionDate)} {sess.startTime ? `(${sess.startTime})` : ''}
-              </p>
-              {sess.recordCount && (
-                <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-500 border-t border-slate-100 pt-1.5 font-mono">
-                  <span className="text-emerald-700 font-bold">
-                    ✓ {sess.recordCount.present}
-                  </span>
-                  <span className="text-amber-700 font-bold">
-                    ⏳ {sess.recordCount.excused}
-                  </span>
-                  <span className="text-rose-700 font-bold">
-                    ✗ {sess.recordCount.unexcused}
-                  </span>
+              <Calendar className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Calendar</span>
+            </button>
+            <button
+              onClick={() => setViewMode('LIST')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                viewMode === 'LIST'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <List className="h-3.5 w-3.5 text-emerald-600" />
+              <span>List ({sessions.length})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* View Content */}
+        {viewMode === 'CALENDAR' ? (
+          <div className="rounded-xl border border-slate-200 overflow-hidden">
+            {/* Days of week header */}
+            <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200 text-center">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                <div key={d} className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  {d}
                 </div>
-              )}
+              ))}
             </div>
-          );
-        })}
+
+            {/* Days grid */}
+            <div className="grid grid-cols-7 auto-rows-fr bg-slate-200 gap-px">
+              {/* Empty leading days */}
+              {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                <div key={`empty-${i}`} className="min-h-24 bg-slate-50/50 p-1.5" />
+              ))}
+
+              {/* Month days */}
+              {Array.from({ length: daysInCalMonth }).map((_, idx) => {
+                const day = idx + 1;
+                const dayKey = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const daySessions = sessions.filter((s) => getSessionDateKey(s.sessionDate) === dayKey);
+                const isToday = dayKey === todayStr;
+
+                return (
+                  <div
+                    key={day}
+                    className={`min-h-24 bg-white p-1.5 flex flex-col transition ${
+                      isToday ? 'bg-emerald-50/30' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span
+                        className={`text-xs font-semibold ${
+                          isToday
+                            ? 'bg-emerald-600 text-white rounded-full h-5 w-5 flex items-center justify-center font-bold text-[10px]'
+                            : 'text-slate-700'
+                        }`}
+                      >
+                        {day}
+                      </span>
+                      {daySessions.length > 0 && (
+                        <span className="text-[9px] font-bold text-slate-400">
+                          {daySessions.length} {daySessions.length === 1 ? 'event' : 'events'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Session Pills */}
+                    <div className="space-y-1 overflow-y-auto max-h-20">
+                      {daySessions.map((sess) => {
+                        const isSelected = sess.id === selectedSessionId;
+                        const isCancelled = sess.status === SessionStatus.CANCELLED;
+                        const isCompleted = sess.status === SessionStatus.COMPLETED;
+
+                        return (
+                          <button
+                            key={sess.id}
+                            onClick={() => handleSelectSession(sess.id)}
+                            className={`w-full text-left truncate px-2 py-1 rounded-md text-[10px] font-bold border transition block ${
+                              isSelected
+                                ? 'ring-2 ring-emerald-500 shadow-2xs font-extrabold'
+                                : 'hover:opacity-80'
+                            } ${
+                              isCancelled
+                                ? 'bg-rose-50 text-rose-700 border-rose-200 line-through'
+                                : isCompleted
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-blue-50 text-blue-800 border-blue-200'
+                            }`}
+                            title={`${sess.title} (${sess.status})`}
+                          >
+                            <span className="mr-1 opacity-70">
+                              {sess.startTime || '•'}
+                            </span>
+                            <span>{sess.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          /* List View */
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full border-collapse text-left text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600">
+                  <th className="px-4 py-2.5">Date & Time</th>
+                  <th className="px-4 py-2.5">Session Title</th>
+                  <th className="px-3 py-2.5">Type</th>
+                  <th className="px-3 py-2.5">Status</th>
+                  <th className="px-3 py-2.5 text-center">Attendance Breakdown</th>
+                  <th className="px-4 py-2.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {sessions.map((sess) => {
+                  const isSelected = sess.id === selectedSessionId;
+                  const isCancelled = sess.status === SessionStatus.CANCELLED;
+
+                  return (
+                    <tr
+                      key={sess.id}
+                      onClick={() => handleSelectSession(sess.id)}
+                      className={`cursor-pointer transition ${
+                        isSelected ? 'bg-emerald-50/60 font-semibold' : 'hover:bg-slate-50/70'
+                      }`}
+                    >
+                      <td className="px-4 py-2.5 whitespace-nowrap text-slate-700 font-medium">
+                        {formatDate(sess.sessionDate)} {sess.startTime ? `(${sess.startTime})` : ''}
+                      </td>
+                      <td className="px-4 py-2.5 font-bold text-slate-900">
+                        {sess.title}
+                        {sess.isRecurring && (
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] text-slate-400 font-normal">
+                            <RotateCw className="h-2.5 w-2.5" /> Repeat
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-600 uppercase text-[10px] font-bold">
+                        {sess.sessionType.replace('_', ' ')}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span
+                          className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            isCancelled
+                              ? 'bg-rose-100 text-rose-800'
+                              : sess.status === SessionStatus.COMPLETED
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
+                        >
+                          {sess.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-center font-mono text-[10px]">
+                        {sess.recordCount ? (
+                          <span className="space-x-2">
+                            <span className="text-emerald-700 font-bold">✓ {sess.recordCount.present}</span>
+                            <span className="text-amber-700 font-bold">⏳ {sess.recordCount.excused}</span>
+                            <span className="text-rose-700 font-bold">✗ {sess.recordCount.unexcused}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectSession(sess.id);
+                          }}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                            isSelected
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {isSelected ? 'Selected' : 'Open'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* SELECTED SESSION DETAIL & CHECKLIST */}
@@ -298,6 +530,15 @@ export const AttendancePage: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleExportPdf}
+                disabled={isExportingPdf}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5 text-slate-500" />
+                <span>{isExportingPdf ? 'Exporting...' : 'Export PDF'}</span>
+              </button>
+
               <button
                 onClick={() => setShowWhatsApp(true)}
                 className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition"

@@ -15,8 +15,11 @@ import {
   Building,
   AlertCircle,
   Clock,
+  Download,
 } from 'lucide-react';
 import { ExpenseCategory } from '@keeper/shared';
+import { pdf } from '@react-pdf/renderer';
+import { ExpensesStatementPDF } from '../reports/ExpensesStatementPDF';
 
 interface ExpensesPageProps {
   onOpenQuickActions: (tab: string) => void;
@@ -31,6 +34,7 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [plannedFilter, setPlannedFilter] = useState<'ALL' | 'PLANNED' | 'UNPLANNED'>('ALL');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   useEffect(() => {
     loadExpenses();
@@ -72,6 +76,32 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({
     .filter((e) => !e.isPlanned)
     .reduce((s, e) => s + Number(e.amount), 0);
 
+  const handleExportPdf = async () => {
+    if (expenses.length === 0) return;
+    setIsExportingPdf(true);
+    try {
+      const blob = await pdf(
+        <ExpensesStatementPDF
+          expenses={filteredExpenses}
+          tenantName={tenant?.name || 'Community Organization'}
+          currency={tenant?.currency || 'RWF'}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Expenses_Statement_${(tenant?.name || 'Community').replace(/\s+/g, '_')}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to generate Expenses PDF', err);
+      alert('Failed to generate Expenses Statement PDF. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -85,15 +115,26 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({
           </p>
         </div>
 
-        {user?.role !== 'VIEWER' && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => onOpenQuickActions('expense')}
-            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-rose-700 transition"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition disabled:opacity-50"
           >
-            <Plus className="h-4 w-4" />
-            <span>Record New Expense</span>
+            <Download className="h-4 w-4 text-slate-500" />
+            <span>{isExportingPdf ? 'Exporting...' : 'Export Outflows PDF'}</span>
           </button>
-        )}
+
+          {user?.role !== 'VIEWER' && (
+            <button
+              onClick={() => onOpenQuickActions('expense')}
+              className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-rose-700 transition"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Record New Expense</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* KPI Overview */}

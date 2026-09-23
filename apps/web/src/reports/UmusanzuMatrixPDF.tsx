@@ -166,7 +166,7 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
               </Text>
             ))}
             <Text style={styles.colSummary}>Total Paid</Text>
-            <Text style={styles.colSummary}>Surplus (+)</Text>
+            <Text style={styles.colSummary}>Advance Credit (+)</Text>
             <Text style={styles.colSummary}>Balance</Text>
           </View>
 
@@ -182,15 +182,11 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
 
               {data.periods.map((p) => {
                 const cell = row.cells[p.id];
+                if (cell?.isExempt) {
+                  return <Text key={p.id} style={[styles.colMonth, styles.unpaidChip]}>N/A</Text>;
+                }
                 if (!cell || cell.paidAmount === 0) {
                   return <Text key={p.id} style={[styles.colMonth, styles.unpaidChip]}>-</Text>;
-                }
-                if (cell.status === AssessmentStatus.SURPLUS) {
-                  return (
-                    <Text key={p.id} style={[styles.colMonth, styles.surplusChip]}>
-                      +{cell.surplusAmount.toLocaleString()}
-                    </Text>
-                  );
                 }
                 if (cell.status === AssessmentStatus.PAID) {
                   return (
@@ -208,7 +204,9 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
 
               <Text style={styles.colSummary}>{row.totalPaid.toLocaleString()}</Text>
               <Text style={styles.colSummary}>
-                {row.totalSurplus > 0 ? `+${row.totalSurplus.toLocaleString()}` : '-'}
+                {(row.advanceCredit || row.member.creditBalance || 0) > 0
+                  ? `+${(row.advanceCredit || row.member.creditBalance).toLocaleString()}`
+                  : '-'}
               </Text>
               <Text style={styles.colSummary}>
                 {row.totalRemaining > 0 ? row.totalRemaining.toLocaleString() : '0'}
@@ -225,7 +223,7 @@ export const UmusanzuMatrixPDF: React.FC<UmusanzuMatrixPDFProps> = ({
               </Text>
             ))}
             <Text style={styles.colSummary}>{data.grandTotalCollected.toLocaleString()}</Text>
-            <Text style={styles.colSummary}>+{data.grandTotalSurplus.toLocaleString()}</Text>
+            <Text style={styles.colSummary}>+{(data.grandTotalAdvance || 0).toLocaleString()}</Text>
             <Text style={styles.colSummary}>{data.grandTotalRemaining.toLocaleString()}</Text>
           </View>
         </View>

@@ -111,12 +111,15 @@ export const createPlan = async (
       const assessmentsData = [];
       for (const period of periods) {
         for (const member of activeMembers) {
+          const memberJoined = member.joinedDate || new Date();
+          const isBeforeJoin = period.dueDate < memberJoined;
+
           assessmentsData.push({
             periodId: period.id,
             memberId: member.id,
-            expectedAmount: input.defaultAmount,
+            expectedAmount: isBeforeJoin ? 0 : input.defaultAmount,
             paidAmount: 0,
-            status: AssessmentStatus.UNPAID,
+            status: isBeforeJoin ? AssessmentStatus.PAID : AssessmentStatus.UNPAID,
             surplusAmount: 0,
           });
         }
@@ -126,6 +129,52 @@ export const createPlan = async (
         await tx.contributionAssessment.createMany({
           data: assessmentsData,
         });
+      }
+
+      // Auto-apply advance credit balance for any member who has prepaid credit
+      for (const member of activeMembers) {
+        let availCredit = Number(member.creditBalance);
+        if (availCredit <= 0) continue;
+
+        const memberAssessments = await tx.contributionAssessment.findMany({
+          where: {
+            memberId: member.id,
+            periodId: { in: periods.map((p) => p.id) },
+          },
+          include: { period: true },
+          orderBy: { period: { orderIndex: 'asc' } },
+        });
+
+        let creditUsed = 0;
+        for (const assess of memberAssessments) {
+          if (availCredit <= 0) break;
+          const exp = Number(assess.expectedAmount);
+          if (exp <= 0) continue; // Exempt
+
+          const needed = exp - Number(assess.paidAmount);
+          if (needed > 0) {
+            const allocate = Math.min(availCredit, needed);
+            availCredit -= allocate;
+            creditUsed += allocate;
+            const updatedPaid = Number(assess.paidAmount) + allocate;
+
+            await tx.contributionAssessment.update({
+              where: { id: assess.id },
+              data: {
+                paidAmount: updatedPaid,
+                surplusAmount: 0,
+                status: updatedPaid >= exp ? AssessmentStatus.PAID : AssessmentStatus.PARTIAL,
+              },
+            });
+          }
+        }
+
+        if (creditUsed > 0) {
+          await tx.member.update({
+            where: { id: member.id },
+            data: { creditBalance: { decrement: creditUsed } },
+          });
+        }
       }
 
       return { plan, periods };
@@ -209,54 +258,57 @@ export const getMatrix = async (
     let grandTotalExpected = 0;
     let grandTotalCollected = 0;
     let grandTotalSurplus = 0;
+    let grandTotalAdvance = 0;
     let grandTotalRemaining = 0;
 
     const rows = members.map((member) => {
       const cells: Record<string, any> = {};
       let totalPaid = 0;
       let totalExpected = 0;
-      let totalSurplus = 0;
       let totalRemaining = 0;
 
       for (const p of periods) {
         const assess = member.assessments.find((a) => a.periodId === p.id);
         const expected = assess ? Number(assess.expectedAmount) : Number(targetPlan.defaultAmount);
+        const isExempt = assess ? expected === 0 : false;
         const paid = assess ? Number(assess.paidAmount) : 0;
-        const surplus = assess ? Number(assess.surplusAmount) : 0;
-        const remaining = Math.max(0, expected - paid);
-        const status = assess ? assess.status : AssessmentStatus.UNPAID;
+        const remaining = isExempt ? 0 : Math.max(0, expected - paid);
+        let status = assess ? assess.status : AssessmentStatus.UNPAID;
+        if (status === AssessmentStatus.SURPLUS) {
+          status = AssessmentStatus.PAID;
+        }
 
         cells[p.id] = {
           assessmentId: assess?.id,
           periodId: p.id,
           expectedAmount: expected,
           paidAmount: paid,
-          surplusAmount: surplus,
+          surplusAmount: 0,
           remainingAmount: remaining,
           status,
+          isExempt,
         };
 
         totalPaid += paid;
         totalExpected += expected;
-        totalSurplus += surplus;
         totalRemaining += remaining;
 
         // Add to period summary
         totalsByPeriod[p.id].expected += expected;
         totalsByPeriod[p.id].collected += paid;
-        totalsByPeriod[p.id].surplus += surplus;
+        totalsByPeriod[p.id].surplus = 0;
         totalsByPeriod[p.id].remaining += remaining;
       }
 
       grandTotalExpected += totalExpected;
       grandTotalCollected += totalPaid;
-      grandTotalSurplus += totalSurplus;
       grandTotalRemaining += totalRemaining;
 
+      const advanceCredit = Number(member.creditBalance);
+      grandTotalAdvance += advanceCredit;
+
       let overallStatus: AssessmentStatus = AssessmentStatus.UNPAID;
-      if (totalPaid >= totalExpected && totalSurplus > 0) {
-        overallStatus = AssessmentStatus.SURPLUS;
-      } else if (totalPaid >= totalExpected) {
+      if (totalRemaining === 0) {
         overallStatus = AssessmentStatus.PAID;
       } else if (totalPaid > 0) {
         overallStatus = AssessmentStatus.PARTIAL;
@@ -278,7 +330,8 @@ export const getMatrix = async (
         cells,
         totalPaid,
         totalExpected,
-        totalSurplus,
+        totalSurplus: 0,
+        advanceCredit,
         totalRemaining,
         overallStatus,
       };
@@ -318,7 +371,8 @@ export const getMatrix = async (
       totalsByPeriod,
       grandTotalExpected,
       grandTotalCollected,
-      grandTotalSurplus,
+      grandTotalSurplus: 0,
+      grandTotalAdvance,
       grandTotalRemaining,
       overallCollectionRate,
     });
@@ -370,67 +424,91 @@ export const recordPayment = async (
           throw new Error('periodId is required for UMUSANZU_SINGLE');
         }
 
-        let assessment = await tx.contributionAssessment.findUnique({
+        const startPeriod = await tx.contributionPeriod.findUniqueOrThrow({
+          where: { id: input.periodId },
+          include: { plan: true },
+        });
+
+        // Load all periods in the plan starting from the selected period
+        const eligiblePeriods = await tx.contributionPeriod.findMany({
           where: {
-            periodId_memberId: {
-              periodId: input.periodId,
-              memberId: input.memberId,
-            },
+            planId: startPeriod.planId,
+            orderIndex: { gte: startPeriod.orderIndex },
           },
+          orderBy: { orderIndex: 'asc' },
         });
 
-        if (!assessment) {
-          // Fallback create assessment
-          const period = await tx.contributionPeriod.findUniqueOrThrow({
-            where: { id: input.periodId },
-            include: { plan: true },
+        let remainingPool = input.amount;
+
+        for (const period of eligiblePeriods) {
+          if (remainingPool <= 0) break;
+
+          let assess = await tx.contributionAssessment.findUnique({
+            where: {
+              periodId_memberId: {
+                periodId: period.id,
+                memberId: input.memberId,
+              },
+            },
           });
 
-          assessment = await tx.contributionAssessment.create({
+          if (!assess) {
+            assess = await tx.contributionAssessment.create({
+              data: {
+                periodId: period.id,
+                memberId: input.memberId,
+                expectedAmount: startPeriod.plan.defaultAmount,
+                paidAmount: 0,
+                status: AssessmentStatus.UNPAID,
+                surplusAmount: 0,
+              },
+            });
+          }
+
+          const expected = Number(assess.expectedAmount);
+          if (expected <= 0) continue; // Exempt / joined later
+
+          const currentPaid = Number(assess.paidAmount);
+          const needed = Math.max(0, expected - currentPaid);
+
+          if (needed > 0) {
+            const allocate = Math.min(remainingPool, needed);
+            const updatedPaid = currentPaid + allocate;
+            remainingPool -= allocate;
+
+            const isDone = updatedPaid >= expected;
+
+            await tx.contributionAssessment.update({
+              where: { id: assess.id },
+              data: {
+                paidAmount: updatedPaid,
+                surplusAmount: 0,
+                status: isDone ? AssessmentStatus.PAID : AssessmentStatus.PARTIAL,
+              },
+            });
+
+            await tx.paymentAllocation.create({
+              data: {
+                paymentId: payment.id,
+                contributionAssessmentId: assess.id,
+                allocatedAmount: allocate,
+                surplusAmount: 0,
+              },
+            });
+          }
+        }
+
+        // If extra money still remains after covering all future periods of this plan,
+        // store the remainder directly in the member's advance credit balance!
+        if (remainingPool > 0) {
+          await tx.member.update({
+            where: { id: input.memberId },
             data: {
-              periodId: input.periodId,
-              memberId: input.memberId,
-              expectedAmount: period.plan.defaultAmount,
-              paidAmount: 0,
-              status: AssessmentStatus.UNPAID,
-              surplusAmount: 0,
+              creditBalance: { increment: remainingPool },
             },
           });
         }
-
-        const newPaidAmount = Number(assessment.paidAmount) + input.amount;
-        const expected = Number(assessment.expectedAmount);
-        let status: AssessmentStatus = AssessmentStatus.PAID;
-        let surplus = 0;
-
-        if (newPaidAmount > expected) {
-          status = AssessmentStatus.SURPLUS;
-          surplus = newPaidAmount - expected;
-        } else if (newPaidAmount === expected) {
-          status = AssessmentStatus.PAID;
-        } else {
-          status = AssessmentStatus.PARTIAL;
-        }
-
-        await tx.contributionAssessment.update({
-          where: { id: assessment.id },
-          data: {
-            paidAmount: newPaidAmount,
-            status,
-            surplusAmount: surplus,
-          },
-        });
-
-        await tx.paymentAllocation.create({
-          data: {
-            paymentId: payment.id,
-            contributionAssessmentId: assessment.id,
-            allocatedAmount: input.amount,
-            surplusAmount: surplus,
-          },
-        });
       } else if (input.targetType === 'UMUSANZU_YEAR_ADVANCE') {
-        // Distribute amount across periods sequentially
         const plan = await tx.contributionPlan.findFirstOrThrow({
           where: {
             id: input.planId,
@@ -468,8 +546,10 @@ export const recordPayment = async (
             });
           }
 
-          const currentPaid = Number(assess.paidAmount);
           const expected = Number(assess.expectedAmount);
+          if (expected <= 0) continue; // Exempt / joined later
+
+          const currentPaid = Number(assess.paidAmount);
           const needed = Math.max(0, expected - currentPaid);
 
           if (needed > 0) {
@@ -483,6 +563,7 @@ export const recordPayment = async (
               where: { id: assess.id },
               data: {
                 paidAmount: updatedPaid,
+                surplusAmount: 0,
                 status: isDone ? AssessmentStatus.PAID : AssessmentStatus.PARTIAL,
               },
             });
@@ -492,29 +573,18 @@ export const recordPayment = async (
                 paymentId: payment.id,
                 contributionAssessmentId: assess.id,
                 allocatedAmount: allocate,
+                surplusAmount: 0,
               },
             });
           }
         }
 
-        // If extra money still remains after covering all periods, record as surplus on last period
-        if (remainingPool > 0 && plan.periods.length > 0) {
-          const lastPeriod = plan.periods[plan.periods.length - 1];
-          const lastAssess = await tx.contributionAssessment.findUniqueOrThrow({
-            where: {
-              periodId_memberId: {
-                periodId: lastPeriod.id,
-                memberId: input.memberId,
-              },
-            },
-          });
-
-          await tx.contributionAssessment.update({
-            where: { id: lastAssess.id },
+        // If extra money still remains after covering all periods, store as advance credit balance!
+        if (remainingPool > 0) {
+          await tx.member.update({
+            where: { id: input.memberId },
             data: {
-              paidAmount: { increment: remainingPool },
-              surplusAmount: { increment: remainingPool },
-              status: AssessmentStatus.SURPLUS,
+              creditBalance: { increment: remainingPool },
             },
           });
         }

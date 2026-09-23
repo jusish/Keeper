@@ -36,6 +36,7 @@ export const memberSchema = z.object({
   gender: z.nativeEnum(Gender).default(Gender.OTHER),
   status: z.nativeEnum(MemberStatus).default(MemberStatus.ACTIVE),
   joinedDate: z.string().optional(),
+  startFromJoinDate: z.boolean().default(true).optional(),
   notes: z.string().optional(),
 });
 

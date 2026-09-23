@@ -306,8 +306,8 @@ async function main() {
     });
   }
 
-  // - Alice Mutoni (KOR-002): Paid with SURPLUS in Jan (7,000 RWF -> +2,000 surplus)
-  const surplusPayment = await prisma.payment.create({
+  // - Alice Mutoni (KOR-002): Paid 7,000 RWF in Jan (5,000 RWF for Jan, 2,000 RWF rolls into Feb)
+  const rollForwardPayment = await prisma.payment.create({
     data: {
       tenantId: tenant1.id,
       memberId: members[1].id,
@@ -316,7 +316,7 @@ async function main() {
       paymentDate: new Date('2026-01-12'),
       method: PaymentMethod.MOBILE_MONEY,
       referenceNumber: 'MM-772910',
-      notes: 'Paid 7,000 RWF with 2,000 surplus credit',
+      notes: 'Paid 7,000 RWF: 5,000 Jan dues and 2,000 roll-forward to Feb',
       recordedByUserId: accountantUser.id,
     },
   });
@@ -333,18 +333,45 @@ async function main() {
   await prisma.contributionAssessment.update({
     where: { id: aliceJanAssessment.id },
     data: {
-      paidAmount: 7000,
-      surplusAmount: 2000,
-      status: AssessmentStatus.SURPLUS,
+      paidAmount: 5000,
+      surplusAmount: 0,
+      status: AssessmentStatus.PAID,
+    },
+  });
+
+  const aliceFebAssessment = await prisma.contributionAssessment.findUniqueOrThrow({
+    where: {
+      periodId_memberId: {
+        periodId: periods[1].id,
+        memberId: members[1].id,
+      },
+    },
+  });
+
+  await prisma.contributionAssessment.update({
+    where: { id: aliceFebAssessment.id },
+    data: {
+      paidAmount: 2000,
+      surplusAmount: 0,
+      status: AssessmentStatus.PARTIAL,
     },
   });
 
   await prisma.paymentAllocation.create({
     data: {
-      paymentId: surplusPayment.id,
+      paymentId: rollForwardPayment.id,
       contributionAssessmentId: aliceJanAssessment.id,
       allocatedAmount: 5000,
-      surplusAmount: 2000,
+      surplusAmount: 0,
+    },
+  });
+
+  await prisma.paymentAllocation.create({
+    data: {
+      paymentId: rollForwardPayment.id,
+      contributionAssessmentId: aliceFebAssessment.id,
+      allocatedAmount: 2000,
+      surplusAmount: 0,
     },
   });
 
